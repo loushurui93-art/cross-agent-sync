@@ -1,0 +1,19 @@
+{
+  "name": "cross-agent-sync",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-first shared workspace across AI coding agents (ZCode & Codex)",
+  "license": "MIT",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @cross-agent-sync/desktop dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "format": "pnpm -r format"
+  }
+}
