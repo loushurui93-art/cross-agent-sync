@@ -43,6 +43,18 @@ export const TaskUpdateSchema = ProjectIdSchema.extend({
 
 export const AgentKindSchema = z.enum(AGENT_KINDS)
 
+/** Apply the AGENTS.md plan previewed earlier (hash must still match). */
+export const RulesApplySchema = ProjectIdSchema.extend({
+  expectedHash: z.string().min(8)
+})
+
+export const McpPlanSchema = ProjectIdSchema.extend({ agentId: AgentKindSchema })
+
+export const AgentActionSchema = McpPlanSchema.extend({
+  /** Hash of the previewed plan.next — apply aborts if it changed since. */
+  expectedHash: z.string().min(8)
+})
+
 /** Uniform IPC envelope: successes carry data, failures carry a code. */
 export interface IpcOk<T> {
   ok: true

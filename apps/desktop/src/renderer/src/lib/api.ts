@@ -51,5 +51,39 @@ export const api = {
   },
   dialog: {
     pickDirectory: () => call<string | null>(A.dialog.pickDirectory())
+  },
+  agents: {
+    status: (projectId: string) => call<AgentsStatus>(A.agents.status(projectId)),
+    planRules: (projectId: string) => call<WritePlan>(A.agents.planRules(projectId)),
+    applyRules: (projectId: string, expectedHash: string) =>
+      call<{ target: string; backupPath: string | null }>(
+        A.agents.applyRules(projectId, expectedHash)
+      ),
+    planMcp: (projectId: string, agentId: string) =>
+      call<WritePlan>(A.agents.planMcp(projectId, agentId)),
+    applyMcp: (projectId: string, agentId: string, expectedHash: string) =>
+      call<{ target: string; backupPath: string | null }>(
+        A.agents.applyMcp(projectId, agentId, expectedHash)
+      )
   }
+}
+
+export interface WritePlan {
+  target: string
+  current: string | null
+  next: string
+  backupPath: string | null
+  preview: { added: number; removed: number }
+}
+
+export interface AgentsStatus {
+  project: { id: string; name: string; rootPath: string }
+  agents: Array<{
+    id: string
+    displayName: string
+    installed: boolean
+    rulesPath: string
+    rulesWritten: boolean
+    mcp: { configured: boolean; path: string; shadowed: boolean; shadowedBy?: string }
+  }>
 }

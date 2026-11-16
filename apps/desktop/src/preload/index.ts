@@ -40,6 +40,22 @@ const api = {
   dialog: {
     pickDirectory: (): Promise<IpcResult<string | null>> =>
       ipcRenderer.invoke('dialog:pickDirectory')
+  },
+  agents: {
+    status: (projectId: string) =>
+      ipcRenderer.invoke('agents:status', { projectId }) as Promise<IpcResult<unknown>>,
+    planRules: (projectId: string) =>
+      ipcRenderer.invoke('agents:planRules', { projectId }) as Promise<IpcResult<unknown>>,
+    applyRules: (projectId: string, expectedHash: string) =>
+      ipcRenderer.invoke('agents:applyRules', { projectId, expectedHash }) as Promise<
+        IpcResult<unknown>
+      >,
+    planMcp: (projectId: string, agentId: string) =>
+      ipcRenderer.invoke('agents:planMcp', { projectId, agentId }) as Promise<IpcResult<unknown>>,
+    applyMcp: (projectId: string, agentId: string, expectedHash: string) =>
+      ipcRenderer.invoke('agents:applyMcp', { projectId, agentId, expectedHash }) as Promise<
+        IpcResult<unknown>
+      >
   }
 }
 

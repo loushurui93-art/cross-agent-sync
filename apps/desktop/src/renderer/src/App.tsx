@@ -5,14 +5,16 @@ import DashboardPage from './pages/DashboardPage'
 import ProjectsPage from './pages/ProjectsPage'
 import ContextPage from './pages/ContextPage'
 import TasksPage from './pages/TasksPage'
+import AgentsPage from './pages/AgentsPage'
 
-type Page = 'dashboard' | 'projects' | 'context' | 'tasks'
+type Page = 'dashboard' | 'projects' | 'context' | 'tasks' | 'agents'
 
 const NAV: Array<{ id: Page; label: string; icon: string }> = [
   { id: 'dashboard', label: '仪表盘', icon: '⌂' },
   { id: 'projects', label: '项目', icon: '▤' },
   { id: 'context', label: '上下文', icon: '✎' },
-  { id: 'tasks', label: '任务', icon: '☑' }
+  { id: 'tasks', label: '任务', icon: '☑' },
+  { id: 'agents', label: 'Agent 接入', icon: '⚡' }
 ]
 
 const ACTIVE_PROJECT_KEY = 'cas.activeProject'
@@ -128,6 +130,7 @@ export default function App(): React.ReactElement {
         )}
         {page === 'context' && <ContextPage active={active} />}
         {page === 'tasks' && <TasksPage active={active} />}
+        {page === 'agents' && <AgentsPage active={active} />}
       </main>
     </div>
   )

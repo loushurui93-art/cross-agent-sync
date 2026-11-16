@@ -10,15 +10,19 @@ import { join } from 'path'
 import { createDatabase, type Db } from '@cross-agent-sync/database'
 import * as core from '@cross-agent-sync/core'
 import {
+  AgentActionSchema,
   appError,
   ContextGetSchema,
   ContextSaveSchema,
+  McpPlanSchema,
   ProjectCreateSchema,
   ProjectIdSchema,
+  RulesApplySchema,
   TaskCreateSchema,
   TaskUpdateSchema,
   type IpcResult
 } from '@cross-agent-sync/shared'
+import { agentsStatus, applyMcp, applyRules, planMcp, planRules } from './agents'
 
 let handle: Db | null = null
 
@@ -97,4 +101,14 @@ export function registerIpc(): void {
   on('tasks:list', ProjectIdSchema, (input) => core.listTasks(db(), input.projectId))
   on('tasks:create', TaskCreateSchema, (input) => core.createTask(db(), input))
   on('tasks:update', TaskUpdateSchema, (input) => core.updateTask(db(), input))
+
+  on('agents:status', ProjectIdSchema, (input) => agentsStatus(input.projectId))
+  on('agents:planRules', ProjectIdSchema, (input) => planRules(input.projectId))
+  on('agents:applyRules', RulesApplySchema, (input) =>
+    applyRules(input.projectId, input.expectedHash)
+  )
+  on('agents:planMcp', McpPlanSchema, (input) => planMcp(input.projectId, input.agentId))
+  on('agents:applyMcp', AgentActionSchema, (input) =>
+    applyMcp(input.projectId, input.agentId, input.expectedHash)
+  )
 }
