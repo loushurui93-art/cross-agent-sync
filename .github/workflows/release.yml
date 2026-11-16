@@ -22,7 +22,7 @@ jobs:
       - name: Bundle MCP server
         run: pnpm --filter @cross-agent-sync/mcp-server build
       - name: Build Windows installer
-        run: pnpm --filter @cross-agent-sync/desktop exec electron-builder --win
+        run: pnpm --filter @cross-agent-sync/desktop build:win
         env:
           ELECTRON_BUILDER_BINARIES_MIRROR: https://npmmirror.com/mirrors/electron-builder-binaries/
       - name: Compute SHA-256
