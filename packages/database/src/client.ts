@@ -25,8 +25,9 @@ function findMigrationsDir(): string {
     join(here, 'migrations'),
     join(here, '..', '..', '..', '..', 'packages', 'database', 'migrations'),
     // packaged Electron app (resourcesPath is defined only under Electron)
-    typeof process !== 'undefined' && (process as { resourcesPath?: string }).resourcesPath
-      ? join((process as { resourcesPath: string }).resourcesPath, 'migrations')
+    typeof process !== 'undefined' &&
+    (process as unknown as { resourcesPath?: string }).resourcesPath
+      ? join((process as unknown as { resourcesPath: string }).resourcesPath, 'migrations')
       : ''
   ].filter(Boolean)
   for (const c of candidates) {
