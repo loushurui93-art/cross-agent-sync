@@ -63,9 +63,20 @@ export function agentsStatus(projectId: string): unknown {
         installed: a.detectInstallation(),
         rulesPath,
         rulesWritten: existsSync(rulesPath),
-        mcp: a.mcpConfigStatus(p.rootPath)
+        mcp: a.mcpConfigStatus(p.rootPath, projectId)
       }
     })
+  }
+}
+
+/** Remove this project's MCP entries from every agent config (guarded). */
+export function cleanupMcpConfigs(projectId: string): void {
+  for (const a of Object.values(adapters)) {
+    try {
+      a.removeMcpConfig('', projectId)
+    } catch (e) {
+      console.warn(`[agents] mcp cleanup failed for ${a.id}:`, e)
+    }
   }
 }
 

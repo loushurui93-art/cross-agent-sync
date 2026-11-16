@@ -123,7 +123,21 @@ export interface AgentAdapter {
   detectInstallation(): boolean
   rulesFile(projectRoot: string): GeneratedFile
   planMcpConfig(projectRoot: string, cfg: McpServerConfig): WritePlan
-  mcpConfigStatus(projectRoot: string): McpConfigStatus
+  mcpConfigStatus(projectRoot: string, projectId?: string): McpConfigStatus
+  /** Remove this project's MCP entries (guarded: backup + atomic). */
+  removeMcpConfig(projectRoot: string, projectId: string): void
 }
+
+/**
+ * Server name per project: `cross-agent-sync-<projectId prefix>`. One entry
+ * per bound project avoids cross-project shadowing in user-level configs
+ * (ZCode) and global config files (Codex).
+ */
+export function serverNameFor(projectId: string): string {
+  return `cross-agent-sync-${projectId.slice(0, 8)}`
+}
+
+/** Legacy fixed name used before per-project names — cleaned up on sight. */
+export const LEGACY_SERVER_NAME = 'cross-agent-sync'
 
 export { join }

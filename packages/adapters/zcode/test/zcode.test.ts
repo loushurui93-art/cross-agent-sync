@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { applyWrite } from '@cross-agent-sync/adapter-common'
@@ -13,13 +13,15 @@ beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'cas-proj-'))
 })
 
-const CFG: McpCfg = {
+const CFG = {
   dbPath: 'C:/data/cas.db',
-  projectId: 'proj-1',
+  projectId: '2363e5c4-a254-4888-ba88-1e7abe25b3cb',
   agentId: 'zcode',
   serverEntry: 'C:/srv/dist/start.js'
 }
-type McpCfg = Parameters<ReturnType<typeof createZcodeAdapter>['planMcpConfig']>[1]
+
+const USER_CONFIG = (home: string): string => join(home, 'cli', 'config.json')
+const ENTRY_NAME = 'cross-agent-sync-2363e5c4'
 
 describe('zcode adapter', () => {
   it('detects installation by the .zcode home', () => {
@@ -28,48 +30,70 @@ describe('zcode adapter', () => {
     expect(createZcodeAdapter({ home: join(zhome, 'missing') }).detectInstallation()).toBe(false)
   })
 
-  it('merges the server into an existing workspace config without clobbering', () => {
-    mkdirSync(join(root, '.zcode'), { recursive: true })
+  it('writes a per-project entry into the USER-level config, preserving existing keys', () => {
+    mkdirSync(join(zhome, 'cli'), { recursive: true })
     writeFileSync(
-      join(root, '.zcode', 'config.json'),
+      USER_CONFIG(zhome),
       JSON.stringify({ plugins: { keep: true }, mcp: { servers: { other: { command: 'x' } } } }),
       'utf8'
     )
     const a = createZcodeAdapter({ home: zhome })
-    const plan = a.planMcpConfig(root, CFG)
-    applyWrite(plan)
+    applyWrite(a.planMcpConfig(root, CFG))
 
-    const saved = JSON.parse(readFileSync(join(root, '.zcode', 'config.json'), 'utf8'))
+    const saved = JSON.parse(readFileSync(USER_CONFIG(zhome), 'utf8'))
     expect(saved.plugins.keep).toBe(true)
     expect(saved.mcp.servers.other).toEqual({ command: 'x' })
-    const entry = saved.mcp.servers['cross-agent-sync']
+    const entry = saved.mcp.servers[ENTRY_NAME]
     expect(entry.type).toBe('stdio')
-    expect(entry.command).toBeTruthy()
     expect(entry.args[0]).toBe(CFG.serverEntry)
-    expect(entry.env.CAS_PROJECT_ID).toBe('proj-1')
-    // no unknown keys (strict schema would drop the server)
+    expect(entry.env.CAS_PROJECT_ID).toBe(CFG.projectId)
+    // strict schema: no unknown keys
     expect(Object.keys(entry).sort()).toEqual(['args', 'command', 'env', 'type'])
-    expect(a.mcpConfigStatus(root).configured).toBe(true)
+    expect(a.mcpConfigStatus(root, CFG.projectId).configured).toBe(true)
   })
 
-  it('refuses to touch an invalid JSON config', () => {
-    mkdirSync(join(root, '.zcode'), { recursive: true })
-    writeFileSync(join(root, '.zcode', 'config.json'), '{broken', 'utf8')
+  it('two projects coexist without shadowing (per-project names)', () => {
     const a = createZcodeAdapter({ home: zhome })
-    expect(() => a.planMcpConfig(root, CFG)).toThrow(/not valid JSON/)
+    applyWrite(a.planMcpConfig(root, CFG))
+    applyWrite(
+      a.planMcpConfig(root, { ...CFG, projectId: '99aaaaaaaa-0000-0000-0000-000000000000' })
+    )
+    const saved = JSON.parse(readFileSync(USER_CONFIG(zhome), 'utf8'))
+    expect(Object.keys(saved.mcp.servers).sort()).toEqual([
+      'cross-agent-sync-2363e5c4',
+      'cross-agent-sync-99aaaaaa'
+    ])
   })
 
-  it('warns when the user-level config shadows the workspace server', () => {
+  it('drops the legacy fixed-name entry while writing', () => {
     mkdirSync(join(zhome, 'cli'), { recursive: true })
     writeFileSync(
-      join(zhome, 'cli', 'config.json'),
+      USER_CONFIG(zhome),
       JSON.stringify({ mcp: { servers: { 'cross-agent-sync': { command: 'old' } } } }),
       'utf8'
     )
     const a = createZcodeAdapter({ home: zhome })
-    const st = a.mcpConfigStatus(root)
-    expect(st.shadowed).toBe(true)
-    expect(st.shadowedBy).toContain(join('cli', 'config.json'))
+    applyWrite(a.planMcpConfig(root, CFG))
+    const saved = JSON.parse(readFileSync(USER_CONFIG(zhome), 'utf8'))
+    expect(saved.mcp.servers['cross-agent-sync']).toBeUndefined()
+    expect(saved.mcp.servers[ENTRY_NAME]).toBeTruthy()
+    expect(a.mcpConfigStatus(root, CFG.projectId).shadowed).toBe(false)
+  })
+
+  it('refuses to touch an invalid JSON config', () => {
+    mkdirSync(join(zhome, 'cli'), { recursive: true })
+    writeFileSync(USER_CONFIG(zhome), '{broken', 'utf8')
+    const a = createZcodeAdapter({ home: zhome })
+    expect(() => a.planMcpConfig(root, CFG)).toThrow(/not valid JSON/)
+  })
+
+  it('removeMcpConfig deletes this project entry (and legacy), with backup', () => {
+    const a = createZcodeAdapter({ home: zhome })
+    applyWrite(a.planMcpConfig(root, CFG))
+    expect(existsSync(USER_CONFIG(zhome))).toBe(true)
+    a.removeMcpConfig(root, CFG.projectId)
+    const saved = JSON.parse(readFileSync(USER_CONFIG(zhome), 'utf8'))
+    expect(saved.mcp.servers[ENTRY_NAME]).toBeUndefined()
   })
 
   it('generates an AGENTS.md rules file', () => {

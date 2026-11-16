@@ -22,7 +22,14 @@ import {
   TaskUpdateSchema,
   type IpcResult
 } from '@cross-agent-sync/shared'
-import { agentsStatus, applyMcp, applyRules, planMcp, planRules } from './agents'
+import {
+  agentsStatus,
+  applyMcp,
+  applyRules,
+  cleanupMcpConfigs,
+  planMcp,
+  planRules
+} from './agents'
 
 let handle: Db | null = null
 
@@ -79,6 +86,7 @@ export function registerIpc(): void {
   on('projects:create', ProjectCreateSchema, (input) => core.createProject(db(), input))
   on('projects:remove', ProjectIdSchema, (input) => {
     core.removeProject(db(), input.projectId)
+    cleanupMcpConfigs(input.projectId)
     return { removed: input.projectId }
   })
 

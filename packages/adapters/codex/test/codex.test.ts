@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { applyWrite } from '@cross-agent-sync/adapter-common'
-import { createCodexAdapter, hasSection, replaceOrAppendSection } from '../src'
+import { createCodexAdapter, hasSection, removeSection, replaceOrAppendSection } from '../src'
 
 let chome: string
 let root: string
@@ -15,10 +15,11 @@ beforeEach(() => {
 
 const CFG = {
   dbPath: 'C:/data/cas.db',
-  projectId: 'proj-1',
+  projectId: '2363e5c4-a254-4888-ba88-1e7abe25b3cb',
   agentId: 'codex',
   serverEntry: 'C:/srv/dist/start.js'
 }
+const SECTION = '[mcp_servers.cross-agent-sync-2363e5c4]'
 
 describe('codex adapter', () => {
   it('detects installation by the .codex home', () => {
@@ -27,7 +28,7 @@ describe('codex adapter', () => {
     expect(createCodexAdapter({ home: join(chome, 'missing') }).detectInstallation()).toBe(false)
   })
 
-  it('appends the section to an existing config, preserving everything else', () => {
+  it('appends a per-project section, preserving everything else', () => {
     mkdirSync(chome, { recursive: true })
     const original =
       '# user comment\nmodel = "gpt-5.2"\n\n[mcp_servers.node_repl]\ncommand = "node"\nargs = ["x"]\n'
@@ -40,18 +41,26 @@ describe('codex adapter', () => {
     expect(saved).toContain('# user comment')
     expect(saved).toContain('model = "gpt-5.2"')
     expect(saved).toContain('[mcp_servers.node_repl]')
-    expect(saved).toContain('[mcp_servers.cross-agent-sync]')
-    expect(saved).toContain(`args = ["${CFG.serverEntry}"]`)
-    expect(saved).toContain(`CAS_PROJECT_ID = "proj-1"`)
-    expect(a.mcpConfigStatus(root).configured).toBe(true)
+    expect(saved).toContain(SECTION)
+    expect(saved).toContain(`CAS_PROJECT_ID = "${CFG.projectId}"`)
+    expect(a.mcpConfigStatus(root, CFG.projectId).configured).toBe(true)
   })
 
-  it('replaces only our section on reconfigure, keeping a backup', () => {
+  it('two projects coexist as separate sections', () => {
+    mkdirSync(chome, { recursive: true })
+    const a = createCodexAdapter({ home: chome })
+    applyWrite(a.planMcpConfig(root, CFG))
+    applyWrite(a.planMcpConfig(root, { ...CFG, projectId: '99aaaaaaa-0000-0000-0000-00000000000' }))
+    const saved = readFileSync(join(chome, 'config.toml'), 'utf8')
+    expect(hasSection(saved, 'mcp_servers.cross-agent-sync-2363e5c4')).toBe(true)
+    expect(hasSection(saved, 'mcp_servers.cross-agent-sync-99aaaaaa')).toBe(true)
+  })
+
+  it('replaces only our section on reconfigure and drops the legacy one', () => {
     mkdirSync(chome, { recursive: true })
     writeFileSync(
       join(chome, 'config.toml'),
-      replaceOrAppendSection('', `[mcp_servers.cross-agent-sync]\ncommand = "old"\n`) +
-        '\n[mcp_servers.other]\ncommand = "y"\n',
+      '[mcp_servers.cross-agent-sync]\ncommand = "old"\n\n[mcp_servers.other]\ncommand = "y"\n',
       'utf8'
     )
     const a = createCodexAdapter({ home: chome })
@@ -60,9 +69,31 @@ describe('codex adapter', () => {
     const saved = readFileSync(join(chome, 'config.toml'), 'utf8')
     expect(saved).toContain('C:/new/start.js')
     expect(saved).not.toContain('"old"')
+    expect(saved).not.toContain('[mcp_servers.cross-agent-sync]')
+    expect(saved).toContain(SECTION)
     expect(saved).toContain('[mcp_servers.other]')
     expect(readFileSync(res.backupPath!, 'utf8')).toContain('"old"')
-    expect(hasSection(saved)).toBe(true)
+  })
+
+  it('removeMcpConfig deletes the section cleanly', () => {
+    mkdirSync(chome, { recursive: true })
+    const a = createCodexAdapter({ home: chome })
+    applyWrite(a.planMcpConfig(root, CFG))
+    a.removeMcpConfig(root, CFG.projectId)
+    const saved = readFileSync(join(chome, 'config.toml'), 'utf8')
+    expect(hasSection(saved, 'mcp_servers.cross-agent-sync-2363e5c4')).toBe(false)
+  })
+
+  it('section primitives: replace/remove keep surrounding content', () => {
+    const base = 'top = 1\n\n[a]\nx = 1\n\n[b]\ny = 2\n'
+    const replaced = replaceOrAppendSection(base, 'a', '[a]\nx = 9')
+    expect(replaced).toContain('top = 1')
+    expect(replaced).toContain('[b]')
+    expect(replaced).toContain('x = 9')
+    const removed = removeSection(replaced, 'a')
+    expect(removed).not.toContain('[a]')
+    expect(removed).toContain('[b]')
+    expect(removed).toContain('top = 1')
   })
 
   it('generates an AGENTS.md rules file at the project root', () => {
