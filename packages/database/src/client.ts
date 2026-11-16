@@ -21,9 +21,10 @@ import { nowIso } from '@cross-agent-sync/shared'
 function findMigrationsDir(): string {
   const here = dirname(fileURLToPath(import.meta.url))
   const candidates = [
-    join(here, '..', 'migrations'),
+    join(here, '..', 'migrations'), // source/vitest: <pkg>/src/..
     join(here, 'migrations'),
-    join(here, '..', '..', '..', '..', 'packages', 'database', 'migrations'),
+    // bundled MCP server: <root>/packages/mcp-server/dist → repo root
+    join(here, '..', '..', '..', 'packages', 'database', 'migrations'),
     // packaged Electron app (resourcesPath is defined only under Electron)
     typeof process !== 'undefined' &&
     (process as unknown as { resourcesPath?: string }).resourcesPath

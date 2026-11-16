@@ -43,9 +43,10 @@ function mcpConfigFor(
     projectId,
     agentId,
     serverEntry: serverEntry(),
+    // process.execPath is electron.exe in dev AND packaged — always run the
+    // MCP server in plain-Node mode, never as a full Electron app
     nodePath: process.execPath,
-    // the packaged app runs the MCP server through its own Electron binary
-    extraEnv: app.isPackaged ? { ELECTRON_RUN_AS_NODE: '1' } : undefined
+    extraEnv: { ELECTRON_RUN_AS_NODE: '1' }
   }
 }
 

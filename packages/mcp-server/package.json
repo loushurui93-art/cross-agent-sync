@@ -10,7 +10,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsup src/start.ts --format esm --target node22 --clean --sourcemap",
+    "build": "esbuild src/start.ts --bundle --platform=node --format=esm --target=node22 --sourcemap --outfile=dist/start.js --external:@modelcontextprotocol/sdk --external:@modelcontextprotocol/sdk/* --external:zod && node scripts/fix-node-prefix.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
-    "tsup": "^8.5.0",
+    "esbuild": "^0.28.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
