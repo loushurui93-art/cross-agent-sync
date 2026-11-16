@@ -179,7 +179,11 @@ function walk(dir: string, fn: (abs: string) => void): void {
 }
 
 function norm(p: string): string {
-  return p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+  return p
+    .replace(/^\\\\\?\\/, '') // Windows extended-length prefix used by Codex
+    .replace(/^\\/g, '')
+    .replace(/\/+$/, '')
+    .toLowerCase()
 }
 
 export { norm as normalizePath, dirname }

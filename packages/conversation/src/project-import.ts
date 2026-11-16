@@ -59,5 +59,9 @@ export function importProjectConversations(
 }
 
 function normalize(p: string): string {
-  return p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+  return p
+    .replace(/^\\\\\?\\/i, '') // Windows extended-length prefix (Codex cwds)
+    .replace(/\\/g, '/')
+    .replace(/\/+$/, '')
+    .toLowerCase()
 }
