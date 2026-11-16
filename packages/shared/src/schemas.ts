@@ -10,8 +10,8 @@ import { z } from 'zod'
 // and a cycle here dead-zones these consts ("Cannot access before
 // initialization").
 
-/** Agents supported in V1 (guide scope decision: ZCode + Codex only). */
-export const AGENT_KINDS = ['zcode', 'codex'] as const
+/** Agents supported in V1: ZCode + Codex; claude-code since v0.2. */
+export const AGENT_KINDS = ['zcode', 'codex', 'claude-code'] as const
 export type AgentKind = (typeof AGENT_KINDS)[number]
 
 /** Task statuses (guide §7.2 `tasks`). */

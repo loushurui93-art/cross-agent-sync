@@ -23,6 +23,7 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
+    "@cross-agent-sync/adapter-claude-code": "workspace:*",
     "@cross-agent-sync/adapter-codex": "workspace:*",
     "@cross-agent-sync/adapter-common": "workspace:*",
     "@cross-agent-sync/adapter-zcode": "workspace:*",

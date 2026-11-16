@@ -115,6 +115,8 @@ export interface McpConfigStatus {
   path: string
   shadowed: boolean
   shadowedBy?: string
+  /** Optional hint shown in the UI (e.g. Claude Code's trust dialog). */
+  detail?: string
 }
 
 export interface AgentAdapter {

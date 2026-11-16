@@ -9,17 +9,22 @@ import type { Db } from '@cross-agent-sync/database'
 import { nowIso } from '@cross-agent-sync/shared'
 import { messagePlainText, PARSER_VERSION, type NormalizedConversation } from './model'
 
-export const AGENT_IDS = ['zcode', 'codex'] as const
+export const AGENT_IDS = ['zcode', 'codex', 'claude-code'] as const
 export type AgentId = (typeof AGENT_IDS)[number]
 
-/** Seed the two V1 agents (id = kind). */
+/** Seed the known agents (id = kind). */
 export function ensureAgents(db: Db): void {
   const now = nowIso()
+  const names: Record<AgentId, string> = {
+    zcode: 'ZCode',
+    codex: 'Codex',
+    'claude-code': 'Claude Code'
+  }
   for (const id of AGENT_IDS) {
     db.run(
       'INSERT INTO agents (id, type, display_name, enabled, created_at, updated_at) ' +
         'VALUES (?, ?, ?, 1, ?, ?) ON CONFLICT(id) DO NOTHING',
-      [id, id, id === 'zcode' ? 'ZCode' : 'Codex', now, now]
+      [id, id, names[id], now, now]
     )
   }
 }

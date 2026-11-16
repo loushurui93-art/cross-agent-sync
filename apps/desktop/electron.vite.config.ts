@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 // Workspace packages ship TypeScript sources; bundle them into the app
 // instead of externalizing (external resolution would fail at runtime).
 const WORKSPACE_PACKAGES = [
+  '@cross-agent-sync/adapter-claude-code',
   '@cross-agent-sync/adapter-codex',
   '@cross-agent-sync/adapter-common',
   '@cross-agent-sync/adapter-zcode',

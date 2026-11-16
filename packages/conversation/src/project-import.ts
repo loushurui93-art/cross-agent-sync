@@ -12,7 +12,7 @@
 import type { Db } from '@cross-agent-sync/database'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
-import { importMany, type ImportSummary } from './import'
+import { importMany, type AgentId, type ImportSummary } from './import'
 import { listZcodeSessions, loadZcodeSession } from './sources/zcode'
 import {
   listCodexThreads,
@@ -21,18 +21,21 @@ import {
   saveScanCacheFile,
   type ScanCache
 } from './sources/codex'
+import { listClaudeSessions, loadClaudeSession } from './sources/claude'
 
 export interface DualImportSummary {
   zcode: ImportSummary
   codex: ImportSummary
-  found: { zcode: number; codex: number }
+  claudeCode: ImportSummary
+  found: { zcode: number; codex: number; claudeCode: number }
 }
 
 export interface ImportOptions {
   limit?: number
   zcodeHome?: string
   codexHome?: string
-  /** Parse every rollout again and replace conversations whose source grew. */
+  claudeHome?: string
+  /** Parse every source again and replace conversations whose source grew. */
   force?: boolean
   /** Where to keep the codex scan cache (recommended: userData). */
   scanCachePath?: string
@@ -46,7 +49,7 @@ function normalize(p: string): string {
     .toLowerCase()
 }
 
-function alreadyImported(db: Db, projectId: string, agentId: 'zcode' | 'codex'): Set<string> {
+function alreadyImported(db: Db, projectId: string, agentId: AgentId): Set<string> {
   const rows = db.all<{ externalId: string | null }>(
     'SELECT external_id AS "externalId" FROM conversations WHERE project_id = ? AND agent_id = ?',
     [projectId, agentId]
@@ -98,9 +101,24 @@ export function importProjectConversations(
     .map((t) => loadCodexThread(t.sourcePath))
   const cSummary = importMany(db, project.id, 'codex', cConvs)
 
+  // ---- Claude Code: session JSONLs under ~/.claude/projects --------------
+  const claudeHome = opts.claudeHome ?? join(homedir(), '.claude')
+  const kAll = listClaudeSessions(claudeHome, undefined, cache)
+  const kMatched = kAll.filter((t) => {
+    const c = normalize(t.cwd)
+    return c === root || c.startsWith(`${root}/`)
+  })
+  const kSkip = opts.force ? new Set<string>() : alreadyImported(db, project.id, 'claude-code')
+  const kConvs = kMatched
+    .filter((t) => !kSkip.has(t.externalId))
+    .slice(0, limit)
+    .map((t) => loadClaudeSession(t.sourcePath))
+  const kSummary = importMany(db, project.id, 'claude-code' as AgentId, kConvs)
+
   return {
     zcode: zSummary,
     codex: cSummary,
-    found: { zcode: zAll.length, codex: cMatched.length }
+    claudeCode: kSummary,
+    found: { zcode: zAll.length, codex: cMatched.length, claudeCode: kMatched.length }
   }
 }

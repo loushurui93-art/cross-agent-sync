@@ -10,6 +10,7 @@ import {
   importProjectConversations,
   listConversations,
   listMessages,
+  loadClaudeSession,
   loadCodexThread,
   loadZcodeSession,
   searchMessages
@@ -98,6 +99,60 @@ describe('zcode source', () => {
     expect(conv.messages[0]!.parts![0]!.text).toContain('修复登录超时')
     const tool = conv.messages[1]!.parts!.find((p) => p.type === 'tool-call')
     expect(tool?.text).toContain('npm test')
+  })
+})
+
+describe('claude source', () => {
+  it('skips sidechains and thinking blocks, keeps text + tool pairs', () => {
+    const dir = join(projectDir, 'claude-proj')
+    const encoded = 'C--Users-LSR-Desktop-test'
+    mkdirSync(join(projectDir, '.claude-home', 'projects', encoded), { recursive: true })
+    const path = join(projectDir, '.claude-home', 'projects', encoded, 'abc123.jsonl')
+    const cwd = 'C:\\Users\\LSR\\Desktop\\test'
+    const lines = [
+      { type: 'ai-title', title: '修 bug', sessionId: 'abc123' },
+      {
+        type: 'user',
+        cwd,
+        timestamp: '2026-11-17T01:00:00.000Z',
+        message: { role: 'user', content: 'why is login failing' }
+      },
+      { type: 'mode', mode: 'normal' },
+      {
+        type: 'assistant',
+        isSidechain: true,
+        message: { role: 'assistant', content: [{ type: 'text', text: 'internal sidechain noise' }] }
+      },
+      {
+        type: 'assistant',
+        timestamp: '2026-11-17T01:00:05.000Z',
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'thinking', thinking: 'hidden reasoning' },
+            { type: 'tool_use', name: 'Bash', input: { command: 'grep -rn login src' } },
+            { type: 'text', text: 'Found the null check bug.' }
+          ]
+        }
+      },
+      {
+        type: 'user',
+        cwd,
+        message: { role: 'user', content: [{ type: 'tool_result', content: 'src/login.ts:1' }] }
+      }
+    ]
+    writeFileSync(path, lines.map((l) => JSON.stringify(l)).join('\n') + '\n', 'utf8')
+
+    const conv = loadClaudeSession(path)
+    expect(conv.title).toBe('修 bug')
+    // sidechain skipped; tool_result folds into the assistant turn context
+    expect(conv.messages.length).toBeGreaterThanOrEqual(2)
+    expect(conv.messages[0]!.parts![0]!.text).toContain('login failing')
+    const all = conv.messages.flatMap((m) => m.parts ?? [])
+    expect(all.some((p) => p.text?.includes('Bash'))).toBe(true)
+    expect(all.some((p) => p.text?.includes('null check'))).toBe(true)
+    expect(all.every((p) => !p.text?.includes('hidden reasoning'))).toBe(true)
+    expect(all.every((p) => !p.text?.includes('sidechain noise'))).toBe(true)
   })
 })
 

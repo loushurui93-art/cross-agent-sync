@@ -16,13 +16,15 @@ import {
 } from '@cross-agent-sync/adapter-common'
 import { createZcodeAdapter } from '@cross-agent-sync/adapter-zcode'
 import { createCodexAdapter } from '@cross-agent-sync/adapter-codex'
+import { createClaudeCodeAdapter } from '@cross-agent-sync/adapter-claude-code'
 import * as core from '@cross-agent-sync/core'
 import { appError, type AgentKind } from '@cross-agent-sync/shared'
 import { db } from './services'
 
 export const adapters: Record<AgentKind, AgentAdapter> = {
   zcode: createZcodeAdapter(),
-  codex: createCodexAdapter()
+  codex: createCodexAdapter(),
+  'claude-code': createClaudeCodeAdapter()
 }
 
 /** Absolute entry of the bundled MCP server. */
@@ -72,9 +74,15 @@ export function agentsStatus(projectId: string): unknown {
 
 /** Remove this project's MCP entries from every agent config (guarded). */
 export function cleanupMcpConfigs(projectId: string): void {
+  let rootPath = ''
+  try {
+    rootPath = core.getProject(db(), projectId).rootPath
+  } catch {
+    /* project already gone — file-scoped adapters just no-op */
+  }
   for (const a of Object.values(adapters)) {
     try {
-      a.removeMcpConfig('', projectId)
+      a.removeMcpConfig(rootPath, projectId)
     } catch (e) {
       console.warn(`[agents] mcp cleanup failed for ${a.id}:`, e)
     }
