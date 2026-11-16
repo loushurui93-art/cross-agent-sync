@@ -19,7 +19,7 @@ extraResources:
 win:
   executableName: cross-agent-sync
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: cross-agent-sync-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
