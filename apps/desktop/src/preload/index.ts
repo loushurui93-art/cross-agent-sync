@@ -8,6 +8,10 @@ import type { IpcResult } from '@cross-agent-sync/shared'
  * directly.
  */
 const api = {
+  appInfo: {
+    /** true when running under the E2E harness (skips onboarding, etc.) */
+    isE2E: !!process.env.CAS_E2E_DIR
+  },
   projects: {
     list: (): Promise<IpcResult<unknown>> => ipcRenderer.invoke('projects:list'),
     create: (input: { name: string; rootPath: string; description?: string }) =>
@@ -59,7 +63,7 @@ const api = {
   },
   conv: {
     import: (projectId: string) =>
-      ipcRenderer.invoke('conv:import', { projectId }) as Promise<IpcResult<unknown>>,
+      ipcRenderer.invoke('conv:import', { projectId, force: true }) as Promise<IpcResult<unknown>>,
     list: (projectId: string) =>
       ipcRenderer.invoke('conv:list', { projectId }) as Promise<IpcResult<unknown>>,
     messages: (conversationId: string) =>
@@ -78,6 +82,13 @@ const api = {
     listBackups: () => ipcRenderer.invoke('data:listBackups') as Promise<IpcResult<unknown>>,
     restore: (name: string) =>
       ipcRenderer.invoke('data:restore', { name }) as Promise<IpcResult<unknown>>
+  },
+  handoffs: {
+    latest: (projectId: string) =>
+      ipcRenderer.invoke('handoffs:latest', { projectId }) as Promise<IpcResult<unknown>>
+  },
+  doctor: {
+    run: () => ipcRenderer.invoke('doctor:run') as Promise<IpcResult<unknown>>
   }
 }
 

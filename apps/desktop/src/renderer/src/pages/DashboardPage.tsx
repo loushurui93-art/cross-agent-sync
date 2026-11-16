@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { ProjectRow, TaskRow } from '@cross-agent-sync/core'
-import { api } from '../lib/api'
+import { api, type HandoffRow } from '../lib/api'
+
+type DashPage =
+  'dashboard' | 'projects' | 'context' | 'tasks' | 'agents' | 'conversations' | 'files' | 'settings'
 
 export default function DashboardPage({
   active,
@@ -9,16 +12,30 @@ export default function DashboardPage({
 }: {
   active: ProjectRow | null
   projects: ProjectRow[]
-  go: (page: 'dashboard' | 'projects' | 'context' | 'tasks') => void
+  go: (page: DashPage) => void
 }): React.ReactElement {
   const [tasks, setTasks] = useState<TaskRow[]>([])
+  const [handoff, setHandoff] = useState<HandoffRow | null>(null)
 
   useEffect(() => {
     if (!active) return
-    api.tasks
-      .list(active.id)
-      .then(setTasks)
-      .catch(() => setTasks([]))
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [t, h] = await Promise.all([
+          api.tasks.list(active.id),
+          api.handoffs.latest(active.id)
+        ])
+        if (cancelled) return
+        setTasks(t)
+        setHandoff(h)
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [active])
 
   const open = tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled')
@@ -37,24 +54,63 @@ export default function DashboardPage({
       </div>
 
       {active ? (
-        <div className="mt-6 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
-          <div className="text-sm font-medium">{active.name}</div>
-          <div className="mt-1 text-xs text-neutral-500">{active.rootPath}</div>
-          <div className="mt-3 flex gap-2">
-            <button
-              className="rounded bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700"
-              onClick={() => go('context')}
-            >
-              编辑上下文
-            </button>
-            <button
-              className="rounded bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700"
-              onClick={() => go('tasks')}
-            >
-              查看任务
-            </button>
+        <>
+          {/* latest handoff — the "what happened in the other agent" card */}
+          <div className="mt-6 rounded-lg border border-neutral-800 bg-gradient-to-b from-neutral-900/80 to-neutral-900/40 p-5">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-sm font-medium">最新交接</div>
+              {handoff && (
+                <div className="text-xs text-neutral-500">
+                  来自 {handoff.fromAgentId ?? 'unknown'} ·{' '}
+                  {new Date(handoff.createdAt).toLocaleString()}
+                </div>
+              )}
+            </div>
+            {handoff ? (
+              <>
+                <p className="line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed text-neutral-300">
+                  {handoff.summary}
+                </p>
+                <button
+                  className="mt-3 text-xs text-blue-400 hover:underline"
+                  onClick={() => go('tasks')}
+                >
+                  查看任务 →
+                </button>
+              </>
+            ) : (
+              <p className="text-xs text-neutral-500">
+                还没有交接记录。在 ZCode / Codex 里让 agent 调用 create_handoff
+                后，这里会显示最新进展。
+              </p>
+            )}
           </div>
-        </div>
+
+          <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
+            <div className="text-sm font-medium">{active.name}</div>
+            <div className="mt-1 text-xs text-neutral-500">{active.rootPath}</div>
+            <div className="mt-3 flex gap-2">
+              <button
+                className="rounded bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700"
+                onClick={() => go('context')}
+              >
+                编辑上下文
+              </button>
+              <button
+                className="rounded bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700"
+                onClick={() => go('tasks')}
+              >
+                查看任务
+              </button>
+              <button
+                className="rounded bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700"
+                onClick={() => go('agents')}
+              >
+                Agent 接入
+              </button>
+            </div>
+          </div>
+        </>
       ) : (
         <div className="mt-6 rounded-lg border border-dashed border-neutral-800 p-8 text-center text-sm text-neutral-500">
           还没有项目。去

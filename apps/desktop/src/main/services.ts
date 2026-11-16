@@ -27,6 +27,7 @@ import {
 import { agentsStatus, applyMcp, applyRules, cleanupMcpConfigs, planMcp, planRules } from './agents'
 import * as conversationsMod from './conversations'
 import * as filesMod from './files'
+import { runDoctor } from './doctor'
 
 let handle: Db | null = null
 
@@ -85,7 +86,19 @@ const Passthrough = { parse: (x: unknown) => (x ?? {}) as Record<string, never> 
 
 export function registerIpc(): void {
   on('projects:list', Passthrough, () => core.listProjects(db()))
-  on('projects:create', ProjectCreateSchema, (input) => core.createProject(db(), input))
+  on('projects:create', ProjectCreateSchema, (input) => {
+    const p = core.createProject(db(), input)
+    // first auto-import for the new project (cheap scan; slight delay so the
+    // UI renders first — a cold codex scan can take a few seconds)
+    setTimeout(() => {
+      try {
+        conversationsMod.importForProject(db(), p.id, false)
+      } catch (e) {
+        console.warn('[main] post-create import failed:', e)
+      }
+    }, 1200)
+    return p
+  })
   on('projects:remove', ProjectIdSchema, (input) => {
     core.removeProject(db(), input.projectId)
     cleanupMcpConfigs(input.projectId)
@@ -123,7 +136,7 @@ export function registerIpc(): void {
   )
 
   on('conv:import', ProjectIdSchema, (input) =>
-    conversationsMod.importForProject(db(), input.projectId)
+    conversationsMod.importForProject(db(), input.projectId, true)
   )
   on('conv:list', ProjectIdSchema, (input) =>
     conversationsMod.listForProject(db(), input.projectId)
@@ -137,4 +150,7 @@ export function registerIpc(): void {
     if (!input?.rootPath) throw appError('INVALID_INPUT', 'rootPath required')
     return filesMod.gitStatus(String(input.rootPath))
   })
+
+  on('handoffs:latest', ProjectIdSchema, (input) => core.getLatestHandoff(db(), input.projectId))
+  on('doctor:run', Passthrough, async () => runDoctor())
 }

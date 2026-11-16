@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { initServices, registerIpc, closeServices, db } from './services'
 import { registerDataIpc } from './data'
 import { restartMonitors, stopMonitors } from './files'
+import { autoImportAll } from './conversations'
 
 function createWindow(): void {
   // Create the browser window.
@@ -76,6 +77,8 @@ app.whenReady().then(() => {
   createWindow()
   // watchers for every managed project (events → file_events, actor=system)
   void restartMonitors(db)
+  // auto-import conversations for all projects (cheap scan-cache mode)
+  setTimeout(() => autoImportAll(db), 2500)
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

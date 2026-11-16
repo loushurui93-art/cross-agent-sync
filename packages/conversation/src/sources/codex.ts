@@ -5,7 +5,7 @@
  * call_id-paired tool results.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { decompress } from 'fzstd'
 import type { NormalizedConversation, NormalizedMessage, NormalizedPart, SourceSummary } from '../model'
@@ -16,25 +16,78 @@ interface Envelope {
   payload?: Record<string, unknown>
 }
 
-export function listCodexThreads(sessionsDir: string, cwd?: string): SourceSummary[] {
+/** Scan cache: path → { mtimeMs, size, cwd } so unchanged rollouts are not re-parsed. */
+export interface ScanCache {
+  [path: string]: { mtimeMs: number; size: number; cwd: string }
+}
+
+export function loadScanCacheFile(file: string): ScanCache {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as ScanCache
+  } catch {
+    return {}
+  }
+}
+
+export function saveScanCacheFile(file: string, cache: ScanCache): void {
+  try {
+    writeFileSync(file, JSON.stringify(cache), 'utf8')
+  } catch {
+    /* best effort */
+  }
+}
+
+export function listCodexThreads(
+  sessionsDir: string,
+  cwd?: string,
+  cache?: ScanCache
+): SourceSummary[] {
   if (!existsSync(sessionsDir)) return []
   const out: SourceSummary[] = []
   walk(sessionsDir, (abs) => {
     const id = threadIdFromFilename(abs)
     if (!id) return
-    let meta: { cwd?: string; updated: number; title: string } | null = null
-    try {
-      meta = readHeader(abs)
-    } catch {
-      return
+    let cwdStr: string | undefined
+    let updated = 0
+    let cached = false
+    if (cache) {
+      try {
+        const st = statSync(abs)
+        const hit = cache[abs]
+        if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+          cwdStr = hit.cwd
+          updated = st.mtimeMs
+          cached = true
+        }
+      } catch {
+        /* fall through to parse */
+      }
     }
-    if (cwd && norm(meta.cwd ?? '') !== norm(cwd)) return
+    if (!cached) {
+      let meta: { cwd?: string; updated: number; title: string } | null = null
+      try {
+        meta = readHeader(abs)
+      } catch {
+        return
+      }
+      cwdStr = meta.cwd
+      updated = meta.updated
+      if (cache) {
+        try {
+          const st = statSync(abs)
+          cache[abs] = { mtimeMs: st.mtimeMs, size: st.size, cwd: cwdStr ?? '' }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    if (cwd && norm(cwdStr ?? '') !== norm(cwd)) return
     out.push({
       externalId: id,
       title: '',
       sourcePath: abs,
-      cwd: meta.cwd ?? '',
-      updatedAt: meta.updated
+      cwd: cwdStr ?? '',
+      updatedAt: updated
     })
   })
   out.sort((a, b) => b.updatedAt - a.updatedAt)
@@ -134,23 +187,34 @@ export function loadCodexThread(path: string): NormalizedConversation {
 }
 
 function readHeader(abs: string): { cwd?: string; updated: number; title: string } {
-  const text = readRolloutText(abs)
-  const lines = text.split('\n').filter((l) => l.trim())
+  // session_meta is always line 0 — parse only that (mtime gives last activity)
+  const first = readFirstLine(abs)
   let cwd: string | undefined
-  let updated = 0
-  for (const line of lines) {
-    try {
-      const env = JSON.parse(line) as Envelope
-      const ts = env.timestamp ? Date.parse(env.timestamp) || 0 : 0
-      updated = Math.max(updated, ts)
-      if (env.type === 'session_meta' && env.payload) {
-        cwd = String(env.payload.cwd ?? '')
-      }
-    } catch {
-      continue
+  try {
+    const env = JSON.parse(first) as Envelope
+    if (env.type === 'session_meta' && env.payload) {
+      cwd = String(env.payload.cwd ?? '')
     }
+  } catch {
+    /* torn head: treat as unknown */
   }
-  return { cwd, updated, title: '' }
+  return { cwd, updated: statMtimeMs(abs), title: '' }
+}
+
+function readFirstLine(abs: string): string {
+  const bytes = readFileSync(abs)
+  const text = abs.endsWith('.zst')
+    ? new TextDecoder().decode(decompress(new Uint8Array(bytes)))
+    : new TextDecoder().decode(bytes.subarray(0, 262144))
+  return text.split('\n')[0] ?? ''
+}
+
+function statMtimeMs(abs: string): number {
+  try {
+    return statSync(abs).mtimeMs
+  } catch {
+    return 0
+  }
 }
 
 function readRolloutText(path: string): string {

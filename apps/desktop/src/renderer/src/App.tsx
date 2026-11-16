@@ -9,6 +9,7 @@ import AgentsPage from './pages/AgentsPage'
 import ConversationsPage from './pages/ConversationsPage'
 import FilesPage from './pages/FilesPage'
 import SettingsPage from './pages/SettingsPage'
+import OnboardingWizard from './components/OnboardingWizard'
 
 type Page =
   'dashboard' | 'projects' | 'context' | 'tasks' | 'agents' | 'conversations' | 'files' | 'settings'
@@ -81,6 +82,21 @@ export default function App(): React.ReactElement {
   const selectProject = (id: string): void => {
     setActiveId(id)
     localStorage.setItem(ACTIVE_PROJECT_KEY, id)
+  }
+
+  // First-run onboarding: no projects yet, not dismissed before, not in E2E
+  const showOnboarding =
+    projects.length === 0 && !localStorage.getItem('cas.onboardingDone') && !api.appInfo.isE2E
+  if (showOnboarding) {
+    return (
+      <OnboardingWizard
+        onDone={() => {
+          localStorage.setItem('cas.onboardingDone', '1')
+          refreshProjects()
+          setPage('dashboard')
+        }}
+      />
+    )
   }
 
   return (

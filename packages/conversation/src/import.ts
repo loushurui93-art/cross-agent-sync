@@ -36,8 +36,10 @@ export function sourceHash(conv: NormalizedConversation): string {
 
 export interface ImportOutcome {
   imported: boolean
+  /** true when an existing conversation was replaced with fresher content */
+  updated?: boolean
   conversationId?: string
-  reason?: 'already-imported' | 'changed-since-import' | 'empty'
+  reason?: 'already-imported' | 'updated' | 'empty'
 }
 
 export function importConversation(
@@ -56,7 +58,9 @@ export function importConversation(
   )
   if (existing) {
     if (existing.sourceHash === hash) return { imported: false, reason: 'already-imported' }
-    return { imported: false, reason: 'changed-since-import' }
+    // source grew since the last import (sessions are append-only): replace
+    replaceConversationRows(db, existing.id, conv, hash)
+    return { imported: true, updated: true, reason: 'updated', conversationId: existing.id }
   }
 
   const conversationId = randomUUID()
@@ -76,29 +80,56 @@ export function importConversation(
         hash
       ]
     )
-    for (const m of conv.messages) {
-      const text = messagePlainText(m)
-      db.run(
-        'INSERT INTO messages (id, conversation_id, external_id, role, content, content_json, sequence, timestamp) ' +
-          'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          randomUUID(),
-          conversationId,
-          m.externalId ?? null,
-          m.role,
-          text || null,
-          m.parts ? JSON.stringify({ parts: m.parts, parser: PARSER_VERSION }) : null,
-          m.sequence,
-          m.timestamp ? new Date(m.timestamp).toISOString() : null
-        ]
-      )
-    }
+    insertMessages(db, conversationId, conv)
   })
   return { imported: true, conversationId }
 }
 
+function replaceConversationRows(
+  db: Db,
+  conversationId: string,
+  conv: NormalizedConversation,
+  hash: string
+): void {
+  db.transaction(() => {
+    db.run('DELETE FROM messages WHERE conversation_id = ?', [conversationId])
+    db.run(
+      'UPDATE conversations SET title = ?, source_hash = ?, imported_at = ?, started_at = ? WHERE id = ?',
+      [
+        conv.title ?? null,
+        hash,
+        nowIso(),
+        conv.startedAt ? new Date(conv.startedAt).toISOString() : null,
+        conversationId
+      ]
+    )
+    insertMessages(db, conversationId, conv)
+  })
+}
+
+function insertMessages(db: Db, conversationId: string, conv: NormalizedConversation): void {
+  for (const m of conv.messages) {
+    const text = messagePlainText(m)
+    db.run(
+      'INSERT INTO messages (id, conversation_id, external_id, role, content, content_json, sequence, timestamp) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        randomUUID(),
+        conversationId,
+        m.externalId ?? null,
+        m.role,
+        text || null,
+        m.parts ? JSON.stringify({ parts: m.parts, parser: PARSER_VERSION }) : null,
+        m.sequence,
+        m.timestamp ? new Date(m.timestamp).toISOString() : null
+      ]
+    )
+  }
+}
+
 export interface ImportSummary {
   imported: number
+  updated: number
   alreadyImported: number
   changedSkipped: number
   empty: number
@@ -110,12 +141,18 @@ export function importMany(
   agentId: AgentId,
   convs: NormalizedConversation[]
 ): ImportSummary {
-  const s: ImportSummary = { imported: 0, alreadyImported: 0, changedSkipped: 0, empty: 0 }
+  const s: ImportSummary = {
+    imported: 0,
+    updated: 0,
+    alreadyImported: 0,
+    changedSkipped: 0,
+    empty: 0
+  }
   for (const c of convs) {
     const r = importConversation(db, projectId, agentId, c)
-    if (r.imported) s.imported++
+    if (r.updated) s.updated++
+    else if (r.imported) s.imported++
     else if (r.reason === 'already-imported') s.alreadyImported++
-    else if (r.reason === 'changed-since-import') s.changedSkipped++
     else s.empty++
   }
   return s

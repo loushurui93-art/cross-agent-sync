@@ -26,10 +26,38 @@ const JOINED_COLUMNS = `m.role, m.timestamp,
          c.external_id AS externalId, c.agent_id AS agentId,
          c.project_id AS projectId, c.source_path AS sourcePath`
 
-export function searchMessages(
-  db: Db,
-  opts: { query: string; projectId?: string; limit?: number }
-): SearchHit[] {
+export interface SearchFilters {
+  projectId?: string
+  agentId?: string
+  /** only messages newer than this many days */
+  sinceDays?: number
+  limit?: number
+}
+
+function filterClauses(
+  opts: SearchFilters,
+  ftsTable: boolean
+): { where: string; params: (string | number)[] } {
+  const conds: string[] = []
+  const params: (string | number)[] = []
+  const prefix = ftsTable ? 'c.' : 'c.'
+  if (opts.projectId) {
+    conds.push(`${prefix}project_id = ?`)
+    params.push(opts.projectId)
+  }
+  if (opts.agentId) {
+    conds.push(`${prefix}agent_id = ?`)
+    params.push(opts.agentId)
+  }
+  if (opts.sinceDays) {
+    const since = new Date(Date.now() - opts.sinceDays * 86_400_000).toISOString()
+    conds.push(ftsTable ? 'm.timestamp >= ?' : 'm.timestamp >= ?')
+    params.push(since)
+  }
+  return { where: conds.length ? `WHERE ${conds.join(' AND ')}` : '', params }
+}
+
+export function searchMessages(db: Db, opts: { query: string } & SearchFilters): SearchHit[] {
   const limit = Math.min(opts.limit ?? 50, 200)
   const q = opts.query.trim()
   if (!q) return []
@@ -37,36 +65,33 @@ export function searchMessages(
   if ([...q].length >= 3) {
     // trigram MATCH: phrase-quote to avoid user syntax errors
     const phrase = `"${q.replace(/"/g, '""')}"`
-    const where = opts.projectId
-      ? 'WHERE messages_fts MATCH ? AND c.project_id = ?'
-      : 'WHERE messages_fts MATCH ?'
-    const params = opts.projectId ? [phrase, opts.projectId, limit] : [phrase, limit]
+    const { where, params } = filterClauses(opts, true)
     return db.all<SearchHit>(
       `SELECT snippet(messages_fts, 0, '[', ']', '…', 16) AS snippet, ${JOINED_COLUMNS}
        FROM messages_fts f
        JOIN messages m ON m.rowid = f.rowid
        JOIN conversations c ON c.id = m.conversation_id
-       ${where}
+       ${where ? `${where} AND messages_fts MATCH ?` : 'WHERE messages_fts MATCH ?'}
        ORDER BY rank
        LIMIT ?`,
-      params
+      [...params, phrase, limit]
     )
   }
 
   // short-query fallback: LIKE scan with a hand-built snippet
   const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
-  const where = opts.projectId
-    ? 'WHERE m.content LIKE ? ESCAPE \'\\\' AND c.project_id = ?'
-    : 'WHERE m.content LIKE ? ESCAPE \'\\\''
-  const params = opts.projectId ? [like, opts.projectId, limit] : [like, limit]
+  const { where, params } = filterClauses(opts, false)
+  const likeWhere = where
+    ? `${where} AND m.content LIKE ? ESCAPE '\\'`
+    : `WHERE m.content LIKE ? ESCAPE '\\'`
   const rows = db.all<SearchHit & { content: string | null }>(
     `SELECT m.content, ${JOINED_COLUMNS}
      FROM messages m
      JOIN conversations c ON c.id = m.conversation_id
-     ${where}
+     ${likeWhere}
      ORDER BY m.timestamp DESC
      LIMIT ?`,
-    params
+    [...params, like, limit]
   )
   return rows.map(({ content, ...r }) => ({ ...r, snippet: makeSnippet(content, q) }))
 }

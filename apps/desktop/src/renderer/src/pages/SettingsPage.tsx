@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, ApiError } from '../lib/api'
+import { api, ApiError, type DoctorFinding } from '../lib/api'
 
 interface BackupRow {
   name: string
@@ -9,6 +9,20 @@ interface BackupRow {
 export default function SettingsPage(): React.ReactElement {
   const [backups, setBackups] = useState<BackupRow[]>([])
   const [message, setMessage] = useState<string | null>(null)
+  const [doctor, setDoctor] = useState<DoctorFinding[] | null>(null)
+  const [doctorBusy, setDoctorBusy] = useState(false)
+
+  const runDoctor = async (): Promise<void> => {
+    setDoctorBusy(true)
+    setDoctor(null)
+    try {
+      setDoctor(await api.doctor.run())
+    } catch (e) {
+      setMessage(String(e))
+    } finally {
+      setDoctorBusy(false)
+    }
+  }
 
   const refresh = async (): Promise<void> => {
     try {
@@ -91,6 +105,50 @@ export default function SettingsPage(): React.ReactElement {
           ))}
           {backups.length === 0 && <div className="text-xs text-neutral-500">暂无备份</div>}
         </div>
+      </div>
+
+      <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-sm font-medium">健康自检</div>
+          <button
+            onClick={runDoctor}
+            disabled={doctorBusy}
+            className="rounded bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700 disabled:opacity-40"
+          >
+            {doctorBusy ? '检查中…' : '运行自检'}
+          </button>
+        </div>
+        <p className="mb-3 text-xs text-neutral-500">
+          检测 Agent 安装、MCP 配置与连通性（会真实启动一次 MCP 服务器握手）、数据与备份状态。
+        </p>
+        {doctor && (
+          <div className="space-y-1">
+            {doctor.map((f, i) => (
+              <div
+                key={i}
+                className="flex items-start justify-between gap-3 rounded border border-neutral-800 px-3 py-2 text-xs"
+              >
+                <div className="min-w-0">
+                  <span className="text-neutral-300">
+                    [{f.group}] {f.name}
+                  </span>
+                  {f.detail && <div className="mt-0.5 break-all text-neutral-500">{f.detail}</div>}
+                </div>
+                <span
+                  className={`shrink-0 ${
+                    f.status === 'ok'
+                      ? 'text-emerald-400'
+                      : f.status === 'warn'
+                        ? 'text-amber-400'
+                        : 'text-red-400'
+                  }`}
+                >
+                  {f.status === 'ok' ? '✓' : f.status === 'warn' ? '⚠' : '✗'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-4 text-xs text-neutral-500">

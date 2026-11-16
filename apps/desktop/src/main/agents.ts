@@ -20,7 +20,7 @@ import * as core from '@cross-agent-sync/core'
 import { appError, type AgentKind } from '@cross-agent-sync/shared'
 import { db } from './services'
 
-const adapters: Record<AgentKind, AgentAdapter> = {
+export const adapters: Record<AgentKind, AgentAdapter> = {
   zcode: createZcodeAdapter(),
   codex: createCodexAdapter()
 }
@@ -34,7 +34,8 @@ export function serverEntry(): string {
   return join(root, 'packages', 'mcp-server', 'dist', 'start.js')
 }
 
-function mcpConfigFor(
+/** Build the MCP server launch config for a project (used by onboarding + doctor). */
+export function mcpConfigFor(
   projectId: string,
   agentId: AgentKind
 ): Parameters<AgentAdapter['planMcpConfig']>[1] {

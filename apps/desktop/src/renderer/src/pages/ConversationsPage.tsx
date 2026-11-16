@@ -12,6 +12,8 @@ export default function ConversationsPage({
   const [summary, setSummary] = useState<string | null>(null)
   const [open, setOpen] = useState<{ title: string; messages: MessageRow[] } | null>(null)
   const [query, setQuery] = useState('')
+  const [agentFilter, setAgentFilter] = useState('all')
+  const [sinceDays, setSinceDays] = useState<number | null>(null)
   const [hits, setHits] = useState<SearchHit[] | null>(null)
 
   const refresh = async (): Promise<void> => {
@@ -43,8 +45,11 @@ export default function ConversationsPage({
     setSummary(null)
     try {
       const s = await api.conv.import(active.id)
-      const fmt = (n: { imported: number; alreadyImported: number }, found: number): string =>
-        `新导入 ${n.imported}/${found}（重复跳过 ${n.alreadyImported}）`
+      const fmt = (
+        n: { imported: number; updated: number; alreadyImported: number },
+        found: number
+      ): string =>
+        `新导入 ${n.imported} · 更新 ${n.updated} / 共 ${found}（未变 ${n.alreadyImported}）`
       setSummary(`ZCode：${fmt(s.zcode, s.found.zcode)} · Codex：${fmt(s.codex, s.found.codex)}`)
       await refresh()
     } catch (e) {
@@ -65,7 +70,14 @@ export default function ConversationsPage({
       return
     }
     try {
-      setHits(await api.conv.search({ query, projectId: active.id }))
+      setHits(
+        await api.conv.search({
+          query,
+          projectId: active.id,
+          agentId: agentFilter === 'all' ? undefined : agentFilter,
+          sinceDays: sinceDays ?? undefined
+        })
+      )
     } catch {
       setHits([])
     }
@@ -94,6 +106,25 @@ export default function ConversationsPage({
       )}
 
       <div className="mb-5 flex gap-2">
+        <select
+          value={agentFilter}
+          onChange={(e) => setAgentFilter(e.target.value)}
+          className="rounded border border-neutral-700 bg-neutral-900 px-2 py-2 text-sm"
+        >
+          <option value="all">全部来源</option>
+          <option value="zcode">ZCode</option>
+          <option value="codex">Codex</option>
+        </select>
+        <select
+          value={sinceDays ?? ''}
+          onChange={(e) => setSinceDays(e.target.value ? Number(e.target.value) : null)}
+          className="rounded border border-neutral-700 bg-neutral-900 px-2 py-2 text-sm"
+        >
+          <option value="">全部时间</option>
+          <option value="7">最近 7 天</option>
+          <option value="30">最近 30 天</option>
+          <option value="90">最近 90 天</option>
+        </select>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}

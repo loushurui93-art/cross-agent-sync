@@ -67,15 +67,16 @@ export const api = {
       )
   },
   conv: {
-    import: (projectId: string) =>
+    import: (projectId: string, force = false) =>
       call<{
-        zcode: { imported: number; alreadyImported: number; changedSkipped: number }
-        codex: { imported: number; alreadyImported: number; changedSkipped: number }
+        zcode: { imported: number; updated: number; alreadyImported: number }
+        codex: { imported: number; updated: number; alreadyImported: number }
         found: { zcode: number; codex: number }
-      }>(A.conv.import(projectId)),
+      }>(A.conv.import(projectId, force)),
     list: (projectId: string) => call<ConversationRow[]>(A.conv.list(projectId)),
     messages: (conversationId: string) => call<MessageRow[]>(A.conv.messages(conversationId)),
-    search: (q: { query: string; projectId?: string }) => call<SearchHit[]>(A.conv.search(q))
+    search: (q: { query: string; projectId?: string; agentId?: string; sinceDays?: number }) =>
+      call<SearchHit[]>(A.conv.search(q))
   },
   files: {
     events: (projectId: string) => call<FileEventRow[]>(A.files.events(projectId)),
@@ -85,7 +86,32 @@ export const api = {
     backup: () => call<{ file: string }>(A.data.backup()),
     listBackups: () => call<Array<{ name: string; file: string }>>(A.data.listBackups()),
     restore: (name: string) => call<{ restoredFrom: string }>(A.data.restore(name))
-  }
+  },
+  handoffs: {
+    latest: (projectId: string) => call<HandoffRow | null>(A.handoffs.latest(projectId))
+  },
+  doctor: {
+    run: () => call<DoctorFinding[]>(A.doctor.run())
+  },
+  appInfo: A.appInfo as { isE2E: boolean }
+}
+
+export interface HandoffRow {
+  id: string
+  projectId: string
+  fromAgentId: string | null
+  toAgentId: string | null
+  summary: string
+  completedTasksJson: string | null
+  nextStepsJson: string | null
+  createdAt: string
+}
+
+export interface DoctorFinding {
+  group: string
+  name: string
+  status: 'ok' | 'warn' | 'fail'
+  detail?: string
 }
 
 export interface ConversationRow {

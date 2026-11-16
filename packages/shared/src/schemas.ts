@@ -69,6 +69,8 @@ export const AgentKindSchema = z.enum(AGENT_KINDS)
 export const ConversationSearchSchema = z.object({
   query: z.string().trim().min(1).max(200),
   projectId: z.string().min(1).optional(),
+  agentId: AgentKindSchema.optional(),
+  sinceDays: z.number().int().min(1).max(365).optional(),
   limit: z.number().int().min(1).max(200).optional()
 })
 
