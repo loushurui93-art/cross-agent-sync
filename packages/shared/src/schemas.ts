@@ -4,7 +4,30 @@
  */
 
 import { z } from 'zod'
-import { AGENT_KINDS, CONTEXT_TYPES, TASK_STATUSES } from './index'
+
+// Constants live here (not in index.ts) so this module has no circular
+// dependency on the package root — bundlers evaluate dependencies first
+// and a cycle here dead-zones these consts ("Cannot access before
+// initialization").
+
+/** Agents supported in V1 (guide scope decision: ZCode + Codex only). */
+export const AGENT_KINDS = ['zcode', 'codex'] as const
+export type AgentKind = (typeof AGENT_KINDS)[number]
+
+/** Task statuses (guide §7.2 `tasks`). */
+export const TASK_STATUSES = ['todo', 'in_progress', 'blocked', 'done', 'cancelled'] as const
+export type TaskStatus = (typeof TASK_STATUSES)[number]
+
+/** Context document types (guide §8 `.agent-sync/context/`). */
+export const CONTEXT_TYPES = [
+  'overview',
+  'architecture',
+  'development-state',
+  'rules',
+  'decision',
+  'handoff'
+] as const
+export type ContextType = (typeof CONTEXT_TYPES)[number]
 
 export const ProjectCreateSchema = z.object({
   name: z.string().trim().min(1).max(200),

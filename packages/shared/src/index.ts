@@ -1,34 +1,11 @@
 /**
  * Cross-module types and constants. The single source of truth for shapes
  * shared between the desktop app, core services, adapters and the MCP
- * server. Zod schemas will live here alongside the types as they are
- * introduced (guide §4.1, §6).
+ * server. Enums + Zod schemas live in ./schemas (re-exported here).
  */
 
-/** Agents supported in V1 (guide scope decision: ZCode + Codex only). */
-export const AGENT_KINDS = ['zcode', 'codex'] as const
-export type AgentKind = (typeof AGENT_KINDS)[number]
-
-/** Task statuses (guide §7.2 `tasks`). */
-export const TASK_STATUSES = [
-  'todo',
-  'in_progress',
-  'blocked',
-  'done',
-  'cancelled'
-] as const
-export type TaskStatus = (typeof TASK_STATUSES)[number]
-
-/** Context document types (guide §8 `.agent-sync/context/`). */
-export const CONTEXT_TYPES = [
-  'overview',
-  'architecture',
-  'development-state',
-  'rules',
-  'decision',
-  'handoff'
-] as const
-export type ContextType = (typeof CONTEXT_TYPES)[number]
+export { AGENT_KINDS, TASK_STATUSES, CONTEXT_TYPES } from './schemas'
+export type { AgentKind, TaskStatus, ContextType } from './schemas'
 
 export const APP_DIR_NAME = '.agent-sync'
 export const MANIFEST_FILE = 'manifest.json'

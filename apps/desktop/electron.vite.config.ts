@@ -19,7 +19,11 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })]
   },
   preload: {
-    plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })]
+    // sandboxed preloads cannot require external packages at runtime —
+    // bundle everything the preload imports
+    plugins: [
+      externalizeDepsPlugin({ exclude: [...WORKSPACE_PACKAGES, '@electron-toolkit/preload'] })
+    ]
   },
   renderer: {
     resolve: {

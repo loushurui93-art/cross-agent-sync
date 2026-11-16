@@ -23,6 +23,17 @@ function createWindow(): void {
     mainWindow.show()
   })
 
+  // surface renderer errors in the dev terminal
+  mainWindow.webContents.on('console-message', (_e, _level, message) => {
+    if (!message.includes('Electron Security Warning')) console.log('[renderer]', message)
+  })
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) =>
+    console.error('[renderer] failed to load', code, desc, url)
+  )
+  mainWindow.webContents.on('render-process-gone', (_e, details) =>
+    console.error('[renderer] process gone', details.reason)
+  )
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
