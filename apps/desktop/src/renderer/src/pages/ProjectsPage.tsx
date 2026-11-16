@@ -60,7 +60,10 @@ export default function ProjectsPage({
     <div className="p-6">
       <h1 className="mb-4 text-xl font-semibold">项目</h1>
 
-      <form onSubmit={submit} className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
+      <form
+        onSubmit={submit}
+        className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4"
+      >
         <div className="mb-3 text-sm font-medium text-neutral-300">导入本地目录作为项目</div>
         <div className="grid grid-cols-2 gap-3">
           <input
@@ -106,7 +109,9 @@ export default function ProjectsPage({
           <div
             key={p.id}
             className={`flex items-center justify-between rounded-lg border p-4 ${
-              p.id === activeId ? 'border-blue-700 bg-blue-950/20' : 'border-neutral-800 bg-neutral-900/40'
+              p.id === activeId
+                ? 'border-blue-700 bg-blue-950/20'
+                : 'border-neutral-800 bg-neutral-900/40'
             }`}
           >
             <div className="min-w-0">

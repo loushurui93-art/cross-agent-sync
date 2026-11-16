@@ -33,11 +33,7 @@ export default function DashboardPage({
       <div className="grid grid-cols-3 gap-4">
         <Stat label="项目数" value={String(projects.length)} onClick={() => go('projects')} />
         <Stat label="进行中任务" value={String(open.length)} onClick={() => go('tasks')} />
-        <Stat
-          label="当前项目"
-          value={active ? active.name : '—'}
-          onClick={() => go('context')}
-        />
+        <Stat label="当前项目" value={active ? active.name : '—'} onClick={() => go('context')} />
       </div>
 
       {active ? (

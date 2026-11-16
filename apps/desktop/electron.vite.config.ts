@@ -9,7 +9,15 @@ const WORKSPACE = /^@cross-agent-sync\//
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@cross-agent-sync/core', '@cross-agent-sync/database', '@cross-agent-sync/shared'] })]
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: [
+          '@cross-agent-sync/core',
+          '@cross-agent-sync/database',
+          '@cross-agent-sync/shared'
+        ]
+      })
+    ]
   },
   preload: {
     plugins: [externalizeDepsPlugin({ exclude: ['@cross-agent-sync/shared'] })]

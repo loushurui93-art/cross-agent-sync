@@ -27,8 +27,23 @@ export default function TasksPage({ active }: { active: ProjectRow | null }): Re
   }, [active])
 
   useEffect(() => {
-    refresh()
-  }, [refresh])
+    if (!active) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await api.tasks.list(active.id)
+        if (!cancelled) {
+          setTasks(list)
+          setError(null)
+        }
+      } catch (e) {
+        if (!cancelled) setError(String(e))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [active])
 
   if (!active) {
     return <div className="p-6 text-sm text-neutral-500">先在项目页选择或导入一个项目。</div>
@@ -48,7 +63,12 @@ export default function TasksPage({ active }: { active: ProjectRow | null }): Re
 
   const setStatus = async (t: TaskRow, status: TaskStatus): Promise<void> => {
     try {
-      await api.tasks.update({ projectId: active.id, taskId: t.id, status, expectedVersion: t.version })
+      await api.tasks.update({
+        projectId: active.id,
+        taskId: t.id,
+        status,
+        expectedVersion: t.version
+      })
       refresh()
     } catch (err) {
       setError(
@@ -60,7 +80,9 @@ export default function TasksPage({ active }: { active: ProjectRow | null }): Re
     }
   }
 
-  const open = tasks.filter((t) => t.status === 'todo' || t.status === 'in_progress' || t.status === 'blocked')
+  const open = tasks.filter(
+    (t) => t.status === 'todo' || t.status === 'in_progress' || t.status === 'blocked'
+  )
   const closed = tasks.filter((t) => t.status === 'done' || t.status === 'cancelled')
 
   return (
@@ -91,7 +113,9 @@ export default function TasksPage({ active }: { active: ProjectRow | null }): Re
             className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900/40 p-3"
           >
             <div className="min-w-0">
-              <div className={`text-sm ${t.status === 'done' ? 'text-neutral-500 line-through' : ''}`}>
+              <div
+                className={`text-sm ${t.status === 'done' ? 'text-neutral-500 line-through' : ''}`}
+              >
                 {t.title}
               </div>
               <div className="mt-0.5 text-xs text-neutral-500">

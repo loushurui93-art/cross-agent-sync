@@ -18,16 +18,10 @@ const api = {
   context: {
     get: (projectId: string, type: string) =>
       ipcRenderer.invoke('context:get', { projectId, type }) as Promise<IpcResult<unknown>>,
-    save: (input: {
-      projectId: string
-      type: string
-      content: string
-      expectedVersion?: number
-    }) => ipcRenderer.invoke('context:save', input) as Promise<IpcResult<unknown>>,
+    save: (input: { projectId: string; type: string; content: string; expectedVersion?: number }) =>
+      ipcRenderer.invoke('context:save', input) as Promise<IpcResult<unknown>>,
     external: (projectId: string, type: string) =>
-      ipcRenderer.invoke('context:external', { projectId, type }) as Promise<
-        IpcResult<boolean>
-      >,
+      ipcRenderer.invoke('context:external', { projectId, type }) as Promise<IpcResult<boolean>>,
     resync: (projectId: string, type: string) =>
       ipcRenderer.invoke('context:resync', { projectId, type }) as Promise<IpcResult<unknown>>
   },

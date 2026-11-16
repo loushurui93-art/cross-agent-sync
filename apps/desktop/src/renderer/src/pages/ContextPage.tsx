@@ -39,8 +39,24 @@ export default function ContextPage({ active }: { active: ProjectRow | null }): 
   )
 
   useEffect(() => {
-    if (active && EDITABLE.includes(type)) load(type)
-  }, [active, type, load])
+    if (!active) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const d = await api.context.get(active.id, type)
+        if (cancelled) return
+        setDoc(d)
+        setContent(d.content)
+        setState('idle')
+        setMessage(null)
+      } catch (e) {
+        if (!cancelled) setMessage(String(e))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [active, type])
 
   if (!active) {
     return <Empty />
@@ -135,7 +151,5 @@ export default function ContextPage({ active }: { active: ProjectRow | null }): 
 }
 
 function Empty(): React.ReactElement {
-  return (
-    <div className="p-6 text-sm text-neutral-500">先在项目页选择或导入一个项目。</div>
-  )
+  return <div className="p-6 text-sm text-neutral-500">先在项目页选择或导入一个项目。</div>
 }

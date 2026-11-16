@@ -20,8 +20,8 @@ const ACTIVE_PROJECT_KEY = 'cas.activeProject'
 export default function App(): React.ReactElement {
   const [page, setPage] = useState<Page>('dashboard')
   const [projects, setProjects] = useState<ProjectRow[]>([])
-  const [activeId, setActiveId] = useState<string | null>(
-    () => localStorage.getItem(ACTIVE_PROJECT_KEY)
+  const [activeId, setActiveId] = useState<string | null>(() =>
+    localStorage.getItem(ACTIVE_PROJECT_KEY)
   )
   const [error, setError] = useState<string | null>(null)
 
@@ -41,12 +41,32 @@ export default function App(): React.ReactElement {
       setError(String(e))
     }
     // activeId intentionally not a dependency: refresh uses latest via closure
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId])
 
   useEffect(() => {
-    refreshProjects()
-  }, [refreshProjects])
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await api.projects.list()
+        if (cancelled) return
+        setProjects(list)
+        setError(null)
+        if (list.length === 0) {
+          setActiveId(null)
+          localStorage.removeItem(ACTIVE_PROJECT_KEY)
+        } else if (!list.some((p) => p.id === activeId)) {
+          setActiveId(list[0].id)
+          localStorage.setItem(ACTIVE_PROJECT_KEY, list[0].id)
+        }
+      } catch (e) {
+        if (!cancelled) setError(String(e))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const active = projects.find((p) => p.id === activeId) ?? null
   const selectProject = (id: string): void => {
@@ -97,9 +117,7 @@ export default function App(): React.ReactElement {
             {error}
           </div>
         )}
-        {page === 'dashboard' && (
-          <DashboardPage active={active} projects={projects} go={setPage} />
-        )}
+        {page === 'dashboard' && <DashboardPage active={active} projects={projects} go={setPage} />}
         {page === 'projects' && (
           <ProjectsPage
             projects={projects}

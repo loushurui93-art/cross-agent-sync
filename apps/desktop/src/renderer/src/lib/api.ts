@@ -31,18 +31,12 @@ export const api = {
     remove: (projectId: string) => call<{ removed: string }>(A.projects.remove(projectId))
   },
   context: {
-    get: (projectId: string, type: string) =>
-      call<ContextDoc>(A.context.get(projectId, type)),
-    save: (input: {
-      projectId: string
-      type: string
-      content: string
-      expectedVersion?: number
-    }) => call<ContextDoc>(A.context.save(input)),
+    get: (projectId: string, type: string) => call<ContextDoc>(A.context.get(projectId, type)),
+    save: (input: { projectId: string; type: string; content: string; expectedVersion?: number }) =>
+      call<ContextDoc>(A.context.save(input)),
     external: (projectId: string, type: string) =>
       call<boolean>(A.context.external(projectId, type)),
-    resync: (projectId: string, type: string) =>
-      call<ContextDoc>(A.context.resync(projectId, type))
+    resync: (projectId: string, type: string) => call<ContextDoc>(A.context.resync(projectId, type))
   },
   tasks: {
     list: (projectId: string) => call<TaskRow[]>(A.tasks.list(projectId)),
