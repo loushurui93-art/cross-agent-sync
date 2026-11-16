@@ -1,0 +1,28 @@
+{
+  "name": "@cross-agent-sync/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "cas-mcp": "./src/start.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cross-agent-sync/core": "workspace:*",
+    "@cross-agent-sync/database": "workspace:*",
+    "@cross-agent-sync/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

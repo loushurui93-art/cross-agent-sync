@@ -20,6 +20,7 @@ export interface CreateTaskInput {
   title: string
   description?: string
   priority?: number
+  actor?: { type: 'user' | 'agent' | 'system'; id?: string }
 }
 
 export interface UpdateTaskInput {
@@ -30,6 +31,7 @@ export interface UpdateTaskInput {
   status?: TaskStatus
   priority?: number
   expectedVersion?: number
+  actor?: { type: 'user' | 'agent' | 'system'; id?: string }
 }
 
 function requireProject(db: Db, projectId: string): void {
@@ -59,7 +61,8 @@ export function createTask(db: Db, input: CreateTaskInput): TaskRow {
   )
   logAudit(db, {
     projectId: input.projectId,
-    actorType: 'user',
+    actorType: input.actor?.type ?? 'user',
+    actorId: input.actor?.id,
     action: 'task.created',
     targetType: 'task',
     targetId: id
@@ -110,7 +113,8 @@ export function updateTask(db: Db, input: UpdateTaskInput): TaskRow {
   )
   logAudit(db, {
     projectId: input.projectId,
-    actorType: 'user',
+    actorType: input.actor?.type ?? 'user',
+    actorId: input.actor?.id,
     action: 'task.updated',
     targetType: 'task',
     targetId: input.taskId,

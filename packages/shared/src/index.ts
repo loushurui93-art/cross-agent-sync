@@ -53,12 +53,20 @@ export interface AppError {
   retryable: boolean
 }
 
-export function appError(
-  code: AppErrorCode,
-  message: string,
-  retryable = false
-): AppError {
-  return { code, message, retryable }
+/** Typed error thrown across Core/IPC/MCP boundaries (carries its code). */
+export class AppError extends Error implements AppError {
+  code: AppErrorCode
+  retryable: boolean
+  constructor(code: AppErrorCode, message: string, retryable = false) {
+    super(message)
+    this.name = 'AppError'
+    this.code = code
+    this.retryable = retryable
+  }
+}
+
+export function appError(code: AppErrorCode, message: string, retryable = false): AppError {
+  return new AppError(code, message, retryable)
 }
 
 /** ISO 8601 UTC timestamp, the canonical time format everywhere (guide §7.3). */
