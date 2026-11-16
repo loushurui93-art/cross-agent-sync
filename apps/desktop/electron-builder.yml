@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: apps-desktop
+appId: org.crossagentsync.desktop
+productName: Cross-Agent Sync
 directories:
   buildResources: build
 files:
@@ -11,8 +11,11 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+extraResources:
+  - from: ../../packages/database/migrations
+    to: migrations
 win:
-  executableName: apps-desktop
+  executableName: cross-agent-sync
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

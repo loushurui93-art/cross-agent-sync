@@ -44,6 +44,7 @@ export type AppErrorCode =
   | 'PATH_OUTSIDE_PROJECT'
   | 'VERSION_CONFLICT'
   | 'IMPORT_FAILED'
+  | 'INVALID_INPUT'
   | 'DATABASE_ERROR'
 
 export interface AppError {
@@ -66,3 +67,5 @@ export type Iso8601 = string
 export function nowIso(): Iso8601 {
   return new Date().toISOString()
 }
+
+export * from './schemas'

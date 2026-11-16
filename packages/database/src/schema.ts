@@ -1,32 +1,107 @@
 /**
- * Drizzle schema. Tables follow guide §7.2; timestamps are ISO 8601 strings,
- * primary keys are stable random ids. Migrations live in `migrations/` and
- * are applied with drizzle's migrator (guide §7.3: FKs on, transactional
- * writes, migration-managed schema).
+ * Row types for the app database (guide §7.2). SELECTs alias snake_case
+ * columns to these camelCase names.
  */
 
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+export interface ProjectRow {
+  id: string
+  name: string
+  rootPath: string
+  description: string | null
+  gitRemote: string | null
+  createdAt: string
+  updatedAt: string
+}
 
-export const projects = sqliteTable('projects', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  rootPath: text('root_path').notNull(),
-  description: text('description'),
-  gitRemote: text('git_remote'),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull()
-})
+export interface AgentRow {
+  id: string
+  type: string
+  displayName: string
+  configPath: string | null
+  enabled: number
+  createdAt: string
+  updatedAt: string
+}
 
-export const agents = sqliteTable('agents', {
-  id: text('id').primaryKey(),
-  type: text('type').notNull(), // AgentKind
-  displayName: text('display_name').notNull(),
-  configPath: text('config_path'),
-  enabled: integer('enabled').notNull().default(0),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull()
-})
+export interface ProjectAgentRow {
+  projectId: string
+  agentId: string
+  status: string
+  lastSeenAt: string | null
+  createdAt: string
+}
 
-// Remaining tables (project_agents, contexts, tasks, decisions, handoffs,
-// conversations, messages, file_events, audit_logs, sync_states) are added
-// in milestone M1 alongside the Core services that use them.
+/** Index over `.agent-sync/` Markdown docs; the file is the body's source of truth. */
+export interface ContextIndexRow {
+  id: string
+  projectId: string
+  contextType: string
+  title: string
+  relativePath: string
+  version: number
+  contentHash: string | null
+  updatedAt: string
+}
+
+export interface TaskRow {
+  id: string
+  projectId: string
+  title: string
+  description: string | null
+  status: string
+  priority: number
+  assignedAgentId: string | null
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DecisionRow {
+  id: string
+  projectId: string
+  title: string
+  summary: string | null
+  relativePath: string | null
+  agentId: string | null
+  decidedAt: string
+  createdAt: string
+}
+
+export interface HandoffRow {
+  id: string
+  projectId: string
+  fromAgentId: string | null
+  toAgentId: string | null
+  summary: string
+  completedTasksJson: string | null
+  nextStepsJson: string | null
+  createdAt: string
+}
+
+export interface AuditLogRow {
+  id: string
+  projectId: string | null
+  actorType: string
+  actorId: string | null
+  action: string
+  targetType: string | null
+  targetId: string | null
+  result: string
+  detailsJson: string | null
+  createdAt: string
+}
+
+/** Canonical SELECT lists (alias snake_case → camelCase). */
+export const SELECTS = {
+  project:
+    'SELECT id, name, root_path AS "rootPath", description, git_remote AS "gitRemote", ' +
+    'created_at AS "createdAt", updated_at AS "updatedAt" FROM projects',
+  context:
+    'SELECT id, project_id AS "projectId", context_type AS "contextType", title, ' +
+    'relative_path AS "relativePath", version, content_hash AS "contentHash", ' +
+    'updated_at AS "updatedAt" FROM contexts',
+  task:
+    'SELECT id, project_id AS "projectId", title, description, status, priority, ' +
+    'assigned_agent_id AS "assignedAgentId", version, created_at AS "createdAt", ' +
+    'updated_at AS "updatedAt" FROM tasks'
+} as const
