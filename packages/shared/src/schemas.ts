@@ -66,6 +66,16 @@ export const TaskUpdateSchema = ProjectIdSchema.extend({
 
 export const AgentKindSchema = z.enum(AGENT_KINDS)
 
+export const ConversationSearchSchema = z.object({
+  query: z.string().trim().min(1).max(200),
+  projectId: z.string().min(1).optional(),
+  limit: z.number().int().min(1).max(200).optional()
+})
+
+export const ConversationMessagesSchema = z.object({
+  conversationId: z.string().min(1)
+})
+
 /** Apply the AGENTS.md plan previewed earlier (hash must still match). */
 export const RulesApplySchema = ProjectIdSchema.extend({
   expectedHash: z.string().min(8)

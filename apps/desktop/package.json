@@ -25,8 +25,11 @@
     "@cross-agent-sync/adapter-codex": "workspace:*",
     "@cross-agent-sync/adapter-common": "workspace:*",
     "@cross-agent-sync/adapter-zcode": "workspace:*",
+    "@cross-agent-sync/conversation": "workspace:*",
     "@cross-agent-sync/core": "workspace:*",
     "@cross-agent-sync/database": "workspace:*",
+    "@cross-agent-sync/file-monitor": "workspace:*",
+    "@cross-agent-sync/git-service": "workspace:*",
     "@cross-agent-sync/shared": "workspace:*",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0"

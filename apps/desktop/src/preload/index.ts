@@ -56,6 +56,22 @@ const api = {
       ipcRenderer.invoke('agents:applyMcp', { projectId, agentId, expectedHash }) as Promise<
         IpcResult<unknown>
       >
+  },
+  conv: {
+    import: (projectId: string) =>
+      ipcRenderer.invoke('conv:import', { projectId }) as Promise<IpcResult<unknown>>,
+    list: (projectId: string) =>
+      ipcRenderer.invoke('conv:list', { projectId }) as Promise<IpcResult<unknown>>,
+    messages: (conversationId: string) =>
+      ipcRenderer.invoke('conv:messages', { conversationId }) as Promise<IpcResult<unknown>>,
+    search: (q: { query: string; projectId?: string; limit?: number }) =>
+      ipcRenderer.invoke('conv:search', q) as Promise<IpcResult<unknown>>
+  },
+  files: {
+    events: (projectId: string) =>
+      ipcRenderer.invoke('files:events', { projectId }) as Promise<IpcResult<unknown>>,
+    git: (rootPath: string) =>
+      ipcRenderer.invoke('files:git', { rootPath }) as Promise<IpcResult<unknown>>
   }
 }
 

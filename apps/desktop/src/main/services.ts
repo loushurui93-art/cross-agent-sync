@@ -14,6 +14,8 @@ import {
   appError,
   ContextGetSchema,
   ContextSaveSchema,
+  ConversationMessagesSchema,
+  ConversationSearchSchema,
   McpPlanSchema,
   ProjectCreateSchema,
   ProjectIdSchema,
@@ -22,14 +24,9 @@ import {
   TaskUpdateSchema,
   type IpcResult
 } from '@cross-agent-sync/shared'
-import {
-  agentsStatus,
-  applyMcp,
-  applyRules,
-  cleanupMcpConfigs,
-  planMcp,
-  planRules
-} from './agents'
+import { agentsStatus, applyMcp, applyRules, cleanupMcpConfigs, planMcp, planRules } from './agents'
+import * as conversationsMod from './conversations'
+import * as filesMod from './files'
 
 let handle: Db | null = null
 
@@ -119,4 +116,20 @@ export function registerIpc(): void {
   on('agents:applyMcp', AgentActionSchema, (input) =>
     applyMcp(input.projectId, input.agentId, input.expectedHash)
   )
+
+  on('conv:import', ProjectIdSchema, (input) =>
+    conversationsMod.importForProject(db(), input.projectId)
+  )
+  on('conv:list', ProjectIdSchema, (input) =>
+    conversationsMod.listForProject(db(), input.projectId)
+  )
+  on('conv:messages', ConversationMessagesSchema, (input) =>
+    conversationsMod.messagesOf(db(), input.conversationId)
+  )
+  on('conv:search', ConversationSearchSchema, (input) => conversationsMod.search(db(), input))
+  on('files:events', ProjectIdSchema, (input) => filesMod.fileEvents(db(), input.projectId))
+  on('files:git', Passthrough, async (input: { rootPath?: string }) => {
+    if (!input?.rootPath) throw appError('INVALID_INPUT', 'rootPath required')
+    return filesMod.gitStatus(String(input.rootPath))
+  })
 }

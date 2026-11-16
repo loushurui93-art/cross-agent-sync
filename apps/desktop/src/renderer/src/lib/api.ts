@@ -65,7 +65,68 @@ export const api = {
       call<{ target: string; backupPath: string | null }>(
         A.agents.applyMcp(projectId, agentId, expectedHash)
       )
+  },
+  conv: {
+    import: (projectId: string) =>
+      call<{
+        zcode: { imported: number; alreadyImported: number; changedSkipped: number }
+        codex: { imported: number; alreadyImported: number; changedSkipped: number }
+        found: { zcode: number; codex: number }
+      }>(A.conv.import(projectId)),
+    list: (projectId: string) => call<ConversationRow[]>(A.conv.list(projectId)),
+    messages: (conversationId: string) => call<MessageRow[]>(A.conv.messages(conversationId)),
+    search: (q: { query: string; projectId?: string }) => call<SearchHit[]>(A.conv.search(q))
+  },
+  files: {
+    events: (projectId: string) => call<FileEventRow[]>(A.files.events(projectId)),
+    git: (rootPath: string) => call<GitStatus>(A.files.git(rootPath))
   }
+}
+
+export interface ConversationRow {
+  id: string
+  projectId: string
+  agentId: string
+  externalId: string | null
+  title: string | null
+  sourcePath: string | null
+  startedAt: string | null
+  importedAt: string
+  messageCount: number
+}
+
+export interface MessageRow {
+  id: string
+  role: string
+  content: string | null
+  sequence: number
+  timestamp: string | null
+}
+
+export interface SearchHit {
+  snippet: string
+  role: string
+  timestamp: string | null
+  conversationId: string
+  conversationTitle: string | null
+  agentId: string
+  sourcePath: string | null
+}
+
+export interface FileEventRow {
+  id: string
+  relativePath: string
+  eventType: string
+  agentId: string | null
+  timestamp: string
+}
+
+export interface GitStatus {
+  isRepo: boolean
+  branch: string | null
+  clean: boolean
+  changedFiles: string[]
+  recentCommits: Array<{ hash: string; author: string; date: string; subject: string }>
 }
 
 export interface WritePlan {

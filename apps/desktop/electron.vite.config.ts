@@ -9,8 +9,11 @@ const WORKSPACE_PACKAGES = [
   '@cross-agent-sync/adapter-codex',
   '@cross-agent-sync/adapter-common',
   '@cross-agent-sync/adapter-zcode',
+  '@cross-agent-sync/conversation',
   '@cross-agent-sync/core',
   '@cross-agent-sync/database',
+  '@cross-agent-sync/file-monitor',
+  '@cross-agent-sync/git-service',
   '@cross-agent-sync/shared'
 ]
 

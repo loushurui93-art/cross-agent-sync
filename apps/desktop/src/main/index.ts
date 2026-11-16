@@ -2,7 +2,8 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { initServices, registerIpc, closeServices } from './services'
+import { initServices, registerIpc, closeServices, db } from './services'
+import { restartMonitors, stopMonitors } from './files'
 
 function createWindow(): void {
   // Create the browser window.
@@ -65,6 +66,8 @@ app.whenReady().then(() => {
   initServices()
   registerIpc()
   createWindow()
+  // watchers for every managed project (events → file_events, actor=system)
+  void restartMonitors(db)
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
@@ -83,6 +86,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  void stopMonitors()
   closeServices()
 })
 
