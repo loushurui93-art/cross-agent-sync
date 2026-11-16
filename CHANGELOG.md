@@ -3,9 +3,38 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.2.0-beta.1] - 2026-11-17
+
+Three agents, self-explaining first run, and self-maintenance.
 
 ### Added
+
+- **Claude Code adapter** — project-level `.mcp.json` (per-project server
+  name), `CLAUDE.md` as an `@AGENTS.md` importer, conversation importer
+  (`~/.claude/projects/**`, sidechains & thinking filtered).
+- **Auto conversation import** — at startup and after project creation;
+  codex scan cache (mtime+size) + already-imported pre-filter; force
+  re-import replaces conversations whose source grew.
+- **First-run onboarding wizard** — welcome → pick project → one-click
+  agent connect → done.
+- **Health self-check (doctor)** — environment, agent detection, MCP
+  config, and a real MCP handshake per agent (Settings page).
+- **Search filters** — by agent and time range.
+- **Dashboard latest-handoff card**.
+- **Context template presets** — generic / frontend / backend / research.
+- **Conflict resolution UI** — "keep external edits" or "keep my edits"
+  (explicit, audited force-save).
+- **In-app update check** — against GitHub Releases (Settings page;
+  packaged builds only).
+- **Release automation** — tag-triggered Windows installer + GitHub
+  Release with SHA-256.
+
+### Changed
+
+- Agent list in onboarding/doctor/status is now driven by the adapter
+  registry (three agents: ZCode, Codex, Claude Code).
+
+## [0.1.0-beta.1] - 2026-11-16
 
 - **Claude Code adapter** — third supported agent: project-level `.mcp.json`
   with per-project server name, `CLAUDE.md` generated as an `@AGENTS.md`

@@ -102,6 +102,10 @@ export const api = {
   doctor: {
     run: () => call<DoctorFinding[]>(A.doctor.run())
   },
+  update: {
+    check: () => call<unknown>(A.update.check()),
+    openRelease: (version: string) => call<boolean>(A.update.openRelease(version))
+  },
   appInfo: A.appInfo as { isE2E: boolean }
 }
 

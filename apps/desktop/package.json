@@ -1,6 +1,6 @@
 {
   "name": "@cross-agent-sync/desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Cross-Agent Sync desktop app — local-first shared workspace for AI coding agents",
   "main": "./out/main/index.js",
   "author": "cross-agent-sync contributors",
@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@cross-agent-sync/adapter-claude-code": "workspace:*",
+    "electron-updater": "^6.6.2",
     "@cross-agent-sync/adapter-codex": "workspace:*",
     "@cross-agent-sync/adapter-common": "workspace:*",
     "@cross-agent-sync/adapter-zcode": "workspace:*",

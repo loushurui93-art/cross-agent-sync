@@ -10,7 +10,14 @@ import type { IpcResult } from '@cross-agent-sync/shared'
 const api = {
   appInfo: {
     /** true when running under the E2E harness (skips onboarding, etc.) */
-    isE2E: !!process.env.CAS_E2E_DIR
+    isE2E: !!process.env.CAS_E2E_DIR,
+    version: (() => {
+      try {
+        return ipcRenderer.sendSync('app:version') as string
+      } catch {
+        return 'dev'
+      }
+    })()
   },
   projects: {
     list: (): Promise<IpcResult<unknown>> => ipcRenderer.invoke('projects:list'),
@@ -89,6 +96,11 @@ const api = {
   },
   doctor: {
     run: () => ipcRenderer.invoke('doctor:run') as Promise<IpcResult<unknown>>
+  },
+  update: {
+    check: () => ipcRenderer.invoke('update:check') as Promise<IpcResult<unknown>>,
+    openRelease: (version: string) =>
+      ipcRenderer.invoke('update:openRelease', { version }) as Promise<IpcResult<unknown>>
   }
 }
 

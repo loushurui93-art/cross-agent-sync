@@ -6,6 +6,7 @@ import { initServices, registerIpc, closeServices, db } from './services'
 import { registerDataIpc } from './data'
 import { restartMonitors, stopMonitors } from './files'
 import { autoImportAll } from './conversations'
+import { registerUpdaterIpc } from './updater'
 
 function createWindow(): void {
   // Create the browser window.
@@ -73,6 +74,7 @@ app.whenReady().then(() => {
   initServices()
   registerIpc()
   registerDataIpc()
+  registerUpdaterIpc()
   console.log('[main] services ready')
   createWindow()
   // watchers for every managed project (events → file_events, actor=system)

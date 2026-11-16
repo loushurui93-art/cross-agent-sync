@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
 import { api, ApiError, type DoctorFinding } from '../lib/api'
 
+const APP_VERSION: string = (window as unknown as { api: { appInfo: { version: string } } }).api
+  .appInfo.version
+
+interface UpdateState {
+  phase: 'idle' | 'checking' | 'up-to-date' | 'available' | 'error'
+  version?: string
+  message?: string
+  releaseUrl?: string | null
+}
+
 interface BackupRow {
   name: string
   file: string
@@ -11,6 +21,25 @@ export default function SettingsPage(): React.ReactElement {
   const [message, setMessage] = useState<string | null>(null)
   const [doctor, setDoctor] = useState<DoctorFinding[] | null>(null)
   const [doctorBusy, setDoctorBusy] = useState(false)
+  const [updateBusy, setUpdateBusy] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null)
+
+  const checkUpdate = async (): Promise<void> => {
+    setUpdateBusy(true)
+    setUpdateMessage(null)
+    try {
+      const s = (await api.update.check()) as UpdateState
+      if (s.phase === 'up-to-date') setUpdateMessage(`已是最新版本（v${s.version}）。`)
+      else if (s.phase === 'available' && s.version) {
+        setUpdateMessage(`发现新版本 v${s.version}！点击前往下载。`)
+        await api.update.openRelease(s.version)
+      } else if (s.phase === 'error') setUpdateMessage(`检查失败：${s.message ?? ''}`)
+    } catch (e) {
+      setUpdateMessage(String(e))
+    } finally {
+      setUpdateBusy(false)
+    }
+  }
 
   const runDoctor = async (): Promise<void> => {
     setDoctorBusy(true)
@@ -105,6 +134,23 @@ export default function SettingsPage(): React.ReactElement {
           ))}
           {backups.length === 0 && <div className="text-xs text-neutral-500">暂无备份</div>}
         </div>
+      </div>
+
+      <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-sm font-medium">软件更新</div>
+          <button
+            onClick={checkUpdate}
+            disabled={updateBusy}
+            className="rounded bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700 disabled:opacity-40"
+          >
+            {updateBusy ? '检查中…' : '检查更新'}
+          </button>
+        </div>
+        <p className="mb-2 text-xs text-neutral-500">
+          当前版本 v{APP_VERSION}（数据目录：用户 AppData，纯本地无上报）
+        </p>
+        {updateMessage && <div className="text-xs text-neutral-300">{updateMessage}</div>}
       </div>
 
       <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">

@@ -1,7 +1,7 @@
 {
   "name": "cross-agent-sync",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local-first shared workspace across AI coding agents (ZCode & Codex)",
   "license": "MIT",
   "packageManager": "pnpm@11.22.0",
