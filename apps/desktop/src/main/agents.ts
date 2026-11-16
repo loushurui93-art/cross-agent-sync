@@ -34,7 +34,10 @@ export function serverEntry(): string {
   return join(root, 'packages', 'mcp-server', 'dist', 'start.js')
 }
 
-function mcpConfigFor(projectId: string, agentId: AgentKind) {
+function mcpConfigFor(
+  projectId: string,
+  agentId: AgentKind
+): Parameters<AgentAdapter['planMcpConfig']>[1] {
   return {
     dbPath: join(app.getPath('userData'), 'cross-agent-sync.db'),
     projectId,
