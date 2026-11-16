@@ -14,12 +14,13 @@ import { hashText } from './hash'
 import { logAudit } from './audit'
 import {
   APP_DIR_NAME,
-  CONTEXT_TEMPLATES,
   DECISIONS_DIR,
   HANDOFFS_DIR,
   TASKS_FILE,
   initialTasksJson,
-  manifestJson
+  manifestJson,
+  templatesFor,
+  type TemplateId
 } from './templates'
 
 export type { ProjectRow }
@@ -27,6 +28,7 @@ export interface CreateProjectInput {
   name: string
   rootPath: string
   description?: string
+  template?: TemplateId
 }
 
 export function createProject(db: Db, input: CreateProjectInput): ProjectRow {
@@ -41,10 +43,11 @@ export function createProject(db: Db, input: CreateProjectInput): ProjectRow {
   const id = randomUUID()
   const now = nowIso()
   const appDir = join(rootPath, APP_DIR_NAME)
+  const templates = templatesFor(input.template ?? 'default')
 
   // Scaffold only what's missing — re-importing an existing .agent-sync
   // adopts its files instead of overwriting (guide §3.4).
-  const created = scaffoldAgentSync(appDir, {
+  const created = scaffoldAgentSync(appDir, templates, {
     projectId: id,
     projectName: name,
     createdAt: now,
@@ -57,7 +60,7 @@ export function createProject(db: Db, input: CreateProjectInput): ProjectRow {
         'VALUES (?, ?, ?, ?, ?, ?)',
       [id, name, rootPath, input.description?.trim() || null, now, now]
     )
-    for (const t of CONTEXT_TEMPLATES) {
+    for (const t of templates) {
       const abs = join(appDir, t.relativePath)
       const body = existsSync(abs) ? readFileSync(abs, 'utf8') : t.body
       db.run(
@@ -74,7 +77,7 @@ export function createProject(db: Db, input: CreateProjectInput): ProjectRow {
     action: 'project.created',
     targetType: 'project',
     targetId: id,
-    details: { rootPath, scaffolded: created.length }
+    details: { rootPath, scaffolded: created.length, template: input.template ?? 'default' }
   })
 
   return getProject(db, id)
@@ -82,6 +85,7 @@ export function createProject(db: Db, input: CreateProjectInput): ProjectRow {
 
 function scaffoldAgentSync(
   appDir: string,
+  templates: ReturnType<typeof templatesFor>,
   meta: { projectId: string; projectName: string; createdAt: string; updatedAt: string }
 ): string[] {
   const created: string[] = []
@@ -92,7 +96,7 @@ function scaffoldAgentSync(
     created.push(abs)
   }
   ensure(join(appDir, 'manifest.json'), manifestJson(meta))
-  for (const t of CONTEXT_TEMPLATES) {
+  for (const t of templates) {
     ensure(join(appDir, t.relativePath), t.body)
   }
   ensure(join(appDir, TASKS_FILE), initialTasksJson())

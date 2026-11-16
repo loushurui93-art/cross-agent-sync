@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ContextDoc, ProjectRow } from '@cross-agent-sync/core'
 import type { ContextType } from '@cross-agent-sync/shared'
 import { api, ApiError } from '../lib/api'
@@ -21,6 +21,8 @@ export default function ContextPage({ active }: { active: ProjectRow | null }): 
   const [content, setContent] = useState('')
   const [state, setState] = useState<SaveState>('idle')
   const [message, setMessage] = useState<string | null>(null)
+  /** one-shot flag: next save overrides the external-change guard */
+  const forceSaveRef = useRef(false)
 
   const load = useCallback(
     async (t: ContextType): Promise<void> => {
@@ -72,15 +74,19 @@ export default function ContextPage({ active }: { active: ProjectRow | null }): 
         projectId: active.id,
         type,
         content,
-        expectedVersion: doc.version
+        expectedVersion: doc.version,
+        force: forceSaveRef.current
       })
+      forceSaveRef.current = false
       setDoc(d)
       setState('saved')
       setMessage(null)
     } catch (e) {
       if (e instanceof ApiError && e.code === 'VERSION_CONFLICT') {
         setState('conflict')
-        setMessage('文件在应用外部被修改过，或版本已变化。请先重新加载再保存。')
+        setMessage(
+          '文件在应用外部被修改过。选择「保留外部修改」重新加载，或「保留我的编辑」强制覆盖。'
+        )
       } else {
         setState('dirty')
         setMessage(String(e))
@@ -89,7 +95,14 @@ export default function ContextPage({ active }: { active: ProjectRow | null }): 
   }
 
   const reload = async (): Promise<void> => {
+    forceSaveRef.current = false
     await load(type)
+  }
+
+  /** Keep my edits: force-save over the external version. */
+  const forceSave = async (): Promise<void> => {
+    forceSaveRef.current = true
+    await save()
   }
 
   return (
@@ -137,8 +150,16 @@ export default function ContextPage({ active }: { active: ProjectRow | null }): 
           onClick={reload}
           className="rounded bg-neutral-800 px-4 py-2 text-sm hover:bg-neutral-700"
         >
-          重新加载
+          {state === 'conflict' ? '保留外部修改（重新加载）' : '重新加载'}
         </button>
+        {state === 'conflict' && (
+          <button
+            onClick={forceSave}
+            className="rounded bg-amber-600 px-4 py-2 text-sm font-medium hover:bg-amber-500"
+          >
+            保留我的编辑（覆盖外部）
+          </button>
+        )}
         <span className="text-xs text-neutral-500">
           {state === 'saved' && '已保存'}
           {state === 'dirty' && '有未保存修改'}

@@ -3,6 +3,31 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Claude Code adapter** — third supported agent: project-level `.mcp.json`
+  with per-project server name, `CLAUDE.md` generated as an `@AGENTS.md`
+  importer, conversation importer (`~/.claude/projects/**`, sidechains &
+  thinking filtered). End-to-end flows (onboarding, doctor, cleanup) now
+  cover all three agents.
+- **Auto conversation import** — startup + after project creation, powered
+  by a codex scan cache (mtime+size) and already-imported pre-filter;
+  force re-import replaces conversations whose source grew.
+- **First-run onboarding wizard** — welcome → pick project → one-click
+  agent connect → done (skipped for E2E runs).
+- **Health self-check (doctor)** on the Settings page — environment, agent
+  detection, per-project MCP config, and a real MCP server handshake.
+- **Search filters** — by agent and time range.
+- **Dashboard latest-handoff card**.
+- **Context template presets** — generic / frontend / backend / research.
+- **Conflict resolution UI** — when a context file changed outside the app,
+  choose "keep external edits" (reload) or "keep my edits" (explicit,
+  audited force-save).
+- **Release automation** — tag-triggered workflow builds the Windows
+  installer and publishes a GitHub Release with SHA-256.
+
 ## [0.1.0-beta.1] - 2026-11-16
 
 First public beta. Local-first shared workspace for ZCode ⇄ Codex.

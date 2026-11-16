@@ -11,6 +11,9 @@ export default function OnboardingWizard({ onDone }: { onDone: () => void }): Re
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
   const [rootPath, setRootPath] = useState('')
+  const [template, setTemplate] = useState<'default' | 'frontend' | 'backend' | 'research'>(
+    'default'
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [projectId, setProjectId] = useState<string | null>(null)
@@ -30,7 +33,11 @@ export default function OnboardingWizard({ onDone }: { onDone: () => void }): Re
     setBusy(true)
     setError(null)
     try {
-      const p = await api.projects.create({ name, rootPath })
+      const p = await api.projects.create({
+        name,
+        rootPath,
+        template
+      })
       setProjectId(p.id)
       setAgentStatus(await api.agents.status(p.id))
       setStep(2)
@@ -146,8 +153,20 @@ export default function OnboardingWizard({ onDone }: { onDone: () => void }): Re
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="项目名称"
-              className="mb-4 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+              className="mb-3 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-neutral-500"
             />
+            <select
+              value={template}
+              onChange={(e) =>
+                setTemplate(e.target.value as 'default' | 'frontend' | 'backend' | 'research')
+              }
+              className="mb-4 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+            >
+              <option value="default">模板：通用</option>
+              <option value="frontend">模板：前端项目</option>
+              <option value="backend">模板：后端项目</option>
+              <option value="research">模板：研究 / 实验</option>
+            </select>
             {error && <div className="mb-3 text-xs text-red-400">{error}</div>}
             <div className="flex gap-2">
               <button

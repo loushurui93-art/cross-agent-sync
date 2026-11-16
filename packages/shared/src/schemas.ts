@@ -32,7 +32,8 @@ export type ContextType = (typeof CONTEXT_TYPES)[number]
 export const ProjectCreateSchema = z.object({
   name: z.string().trim().min(1).max(200),
   rootPath: z.string().trim().min(1),
-  description: z.string().trim().max(2000).optional()
+  description: z.string().trim().max(2000).optional(),
+  template: z.enum(['default', 'frontend', 'backend', 'research']).optional()
 })
 export type ProjectCreateInput = z.infer<typeof ProjectCreateSchema>
 
@@ -46,7 +47,8 @@ export const ContextGetSchema = ProjectIdSchema.extend({
 
 export const ContextSaveSchema = ContextGetSchema.extend({
   content: z.string().max(2_000_000),
-  expectedVersion: z.number().int().positive().optional()
+  expectedVersion: z.number().int().positive().optional(),
+  force: z.boolean().optional()
 })
 
 export const TaskCreateSchema = ProjectIdSchema.extend({

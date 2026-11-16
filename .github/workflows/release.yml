@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Bundle MCP server
+        run: pnpm --filter @cross-agent-sync/mcp-server build
+      - name: Build Windows installer
+        run: pnpm --filter @cross-agent-sync/desktop exec electron-builder --win
+        env:
+          ELECTRON_BUILDER_BINARIES_MIRROR: https://npmmirror.com/mirrors/electron-builder-binaries/
+      - name: Compute SHA-256
+        id: sha
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem apps/desktop/dist/*-setup.exe | Select-Object -First 1
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          "exe=$($exe.Name)" >> $env:GITHUB_OUTPUT
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $notes = @"
+          **Windows x64 installer (unsigned beta).** SmartScreen may warn — "More info → Run anyway".
+
+          SHA-256: ``${{ steps.sha.outputs.sha256 }}``
+
+          See CHANGELOG.md for what's new.
+          "@
+          gh release create $tag --title "$tag" --notes "$notes" "apps/desktop/dist/${{ steps.sha.outputs.exe }}"

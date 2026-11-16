@@ -16,6 +16,9 @@ export default function ProjectsPage({
   const [name, setName] = useState('')
   const [rootPath, setRootPath] = useState('')
   const [description, setDescription] = useState('')
+  const [template, setTemplate] = useState<'default' | 'frontend' | 'backend' | 'research'>(
+    'default'
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,7 +36,12 @@ export default function ProjectsPage({
     setBusy(true)
     setError(null)
     try {
-      const p = await api.projects.create({ name, rootPath, description: description || undefined })
+      const p = await api.projects.create({
+        name,
+        rootPath,
+        description: description || undefined,
+        template
+      })
       onSelect(p.id)
       setName('')
       setRootPath('')
@@ -94,6 +102,18 @@ export default function ProjectsPage({
           placeholder="描述（可选）"
           className="mt-3 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-neutral-500"
         />
+        <select
+          value={template}
+          onChange={(e) =>
+            setTemplate(e.target.value as 'default' | 'frontend' | 'backend' | 'research')
+          }
+          className="mt-3 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+        >
+          <option value="default">模板：通用</option>
+          <option value="frontend">模板：前端项目</option>
+          <option value="backend">模板：后端项目</option>
+          <option value="research">模板：研究 / 实验</option>
+        </select>
         {error && <div className="mt-3 text-xs text-red-400">{error}</div>}
         <button
           type="submit"

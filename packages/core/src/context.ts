@@ -31,6 +31,11 @@ export interface SaveContextInput {
   content: string
   /** When given, must match the index version the caller last saw. */
   expectedVersion?: number
+  /**
+   * Explicit user override of the external-change guard (the UI offers this
+   * as "keep my edits" after showing the conflict). Still audited.
+   */
+  force?: boolean
 }
 
 function contextRow(db: Db, projectId: string, type: string): ContextIndexRow {
@@ -83,7 +88,7 @@ export function saveContext(db: Db, input: SaveContextInput): ContextDoc {
   }
 
   const abs = contextPath(root, row)
-  if (existsSync(abs)) {
+  if (!input.force && existsSync(abs)) {
     const diskHash = hashText(readFileSync(abs, 'utf8'))
     if (diskHash !== row.contentHash) {
       // The file changed outside the app since we indexed it — refuse to
@@ -110,7 +115,7 @@ export function saveContext(db: Db, input: SaveContextInput): ContextDoc {
     action: 'context.saved',
     targetType: 'context',
     targetId: `${input.projectId}/${input.type}`,
-    details: { version: newVersion }
+    details: { version: newVersion, force: input.force === true }
   })
 
   return {

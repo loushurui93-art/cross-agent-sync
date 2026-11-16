@@ -26,14 +26,23 @@ const A = (window as any).api
 export const api = {
   projects: {
     list: () => call<ProjectRow[]>(A.projects.list()),
-    create: (input: { name: string; rootPath: string; description?: string }) =>
-      call<ProjectRow>(A.projects.create(input)),
+    create: (input: {
+      name: string
+      rootPath: string
+      description?: string
+      template?: 'default' | 'frontend' | 'backend' | 'research'
+    }) => call<ProjectRow>(A.projects.create(input)),
     remove: (projectId: string) => call<{ removed: string }>(A.projects.remove(projectId))
   },
   context: {
     get: (projectId: string, type: string) => call<ContextDoc>(A.context.get(projectId, type)),
-    save: (input: { projectId: string; type: string; content: string; expectedVersion?: number }) =>
-      call<ContextDoc>(A.context.save(input)),
+    save: (input: {
+      projectId: string
+      type: string
+      content: string
+      expectedVersion?: number
+      force?: boolean
+    }) => call<ContextDoc>(A.context.save(input)),
     external: (projectId: string, type: string) =>
       call<boolean>(A.context.external(projectId, type)),
     resync: (projectId: string, type: string) => call<ContextDoc>(A.context.resync(projectId, type))
