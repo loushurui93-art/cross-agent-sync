@@ -45,6 +45,11 @@ export function closeServices(): void {
   handle = null
 }
 
+/** Swap in a new database handle (used by backup restore). */
+export function setHandle(next: Db): void {
+  handle = next
+}
+
 function ok<T>(data: T): IpcResult<T> {
   return { ok: true, data }
 }

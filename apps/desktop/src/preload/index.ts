@@ -72,6 +72,12 @@ const api = {
       ipcRenderer.invoke('files:events', { projectId }) as Promise<IpcResult<unknown>>,
     git: (rootPath: string) =>
       ipcRenderer.invoke('files:git', { rootPath }) as Promise<IpcResult<unknown>>
+  },
+  data: {
+    backup: () => ipcRenderer.invoke('data:backup') as Promise<IpcResult<unknown>>,
+    listBackups: () => ipcRenderer.invoke('data:listBackups') as Promise<IpcResult<unknown>>,
+    restore: (name: string) =>
+      ipcRenderer.invoke('data:restore', { name }) as Promise<IpcResult<unknown>>
   }
 }
 

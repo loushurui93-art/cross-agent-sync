@@ -8,8 +8,10 @@ import TasksPage from './pages/TasksPage'
 import AgentsPage from './pages/AgentsPage'
 import ConversationsPage from './pages/ConversationsPage'
 import FilesPage from './pages/FilesPage'
+import SettingsPage from './pages/SettingsPage'
 
-type Page = 'dashboard' | 'projects' | 'context' | 'tasks' | 'agents' | 'conversations' | 'files'
+type Page =
+  'dashboard' | 'projects' | 'context' | 'tasks' | 'agents' | 'conversations' | 'files' | 'settings'
 
 const NAV: Array<{ id: Page; label: string; icon: string }> = [
   { id: 'dashboard', label: '仪表盘', icon: '⌂' },
@@ -18,7 +20,8 @@ const NAV: Array<{ id: Page; label: string; icon: string }> = [
   { id: 'tasks', label: '任务', icon: '☑' },
   { id: 'agents', label: 'Agent 接入', icon: '⚡' },
   { id: 'conversations', label: '会话', icon: '💬' },
-  { id: 'files', label: '文件', icon: 'Δ' }
+  { id: 'files', label: '文件', icon: 'Δ' },
+  { id: 'settings', label: '设置', icon: '⚙' }
 ]
 
 const ACTIVE_PROJECT_KEY = 'cas.activeProject'
@@ -137,6 +140,7 @@ export default function App(): React.ReactElement {
         {page === 'agents' && <AgentsPage active={active} />}
         {page === 'conversations' && <ConversationsPage active={active} />}
         {page === 'files' && <FilesPage active={active} />}
+        {page === 'settings' && <SettingsPage />}
       </main>
     </div>
   )

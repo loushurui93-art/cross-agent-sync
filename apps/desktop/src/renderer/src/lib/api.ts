@@ -80,6 +80,11 @@ export const api = {
   files: {
     events: (projectId: string) => call<FileEventRow[]>(A.files.events(projectId)),
     git: (rootPath: string) => call<GitStatus>(A.files.git(rootPath))
+  },
+  data: {
+    backup: () => call<{ file: string }>(A.data.backup()),
+    listBackups: () => call<Array<{ name: string; file: string }>>(A.data.listBackups()),
+    restore: (name: string) => call<{ restoredFrom: string }>(A.data.restore(name))
   }
 }
 

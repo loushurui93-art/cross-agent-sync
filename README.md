@@ -11,15 +11,23 @@
 - 📁 **Project 变化**：文件增删改事件 + Git 只读状态
 - 🔒 **Local-first**：数据在本机；修改任何 Agent 配置前先备份、可恢复；导入内容视为不可信数据
 
-状态：**早期开发中**（M0）。V1 只做 ZCode + Codex 适配器。
+状态：**Beta（v0.1.0-beta.1）**。V1 只做 ZCode + Codex 适配器；Claude Code / Cursor 适配器接口已预留。
+
+## Windows 安装包（Beta）
+
+从 [Releases](../../releases) 下载 `cross-agent-sync-*-setup.exe`：
+
+- **未签名构建**：首次运行可能遇到 SmartScreen / Smart App Control 提示——点「更多信息 → 仍要运行」；SAC 强制模式用户如被硬拦，请用 SHA-256 校验文件后暂时改用源码运行（`pnpm dev`）。正式版将接入免费开源签名（SignPath）。
+- 安装后数据保存在 `%APPDATA%/Cross-Agent Sync/`，纯本地无上报。
 
 ## 开发
 
 ```bash
 pnpm install
 pnpm dev          # 启动桌面应用
-pnpm test         # vitest
+pnpm test         # vitest（10 包单测）
 pnpm typecheck && pnpm lint
+pnpm --filter @cross-agent-sync/desktop e2e   # Playwright E2E（5 流程）
 ```
 
 要求：Node ≥ 22、pnpm 11。

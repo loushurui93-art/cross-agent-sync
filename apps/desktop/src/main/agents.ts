@@ -28,7 +28,7 @@ const adapters: Record<AgentKind, AgentAdapter> = {
 /** Absolute entry of the bundled MCP server. */
 export function serverEntry(): string {
   if (app.isPackaged) {
-    return join(process.resourcesPath, 'mcp-server', 'start.mjs')
+    return join(process.resourcesPath, 'mcp-server', 'start.js')
   }
   const root = join(app.getAppPath(), '..', '..')
   return join(root, 'packages', 'mcp-server', 'dist', 'start.js')
