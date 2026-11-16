@@ -65,6 +65,7 @@ app.whenReady().then(() => {
 
   initServices()
   registerIpc()
+  console.log('[main] services ready')
   createWindow()
   // watchers for every managed project (events → file_events, actor=system)
   void restartMonitors(db)

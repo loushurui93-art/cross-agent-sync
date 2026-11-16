@@ -13,24 +13,29 @@ import { fileURLToPath } from 'node:url'
 import { nowIso } from '@cross-agent-sync/shared'
 
 /**
- * Locate the SQL migrations folder across runtime layouts:
- *  - source/vitest: `<pkg>/src/..` → `<pkg>/migrations`
- *  - electron-vite dev bundle: `<app>/out/main` → up to repo root
- *  - packaged app: extraResources `migrations/` next to the asar
+ * Locate the SQL migrations folder across runtime layouts by probing
+ * upwards from this module (bundle depth varies: `src/`, `out/main/`,
+ * `dist/`, packaged resources):
+ *   <pkg>/src/..          → <pkg>/migrations            (source/vitest)
+ *   <root>/…/out|dist     → <root>/packages/database/migrations (bundles)
+ *   resourcesPath         → migrations/                 (packaged app)
  */
 function findMigrationsDir(): string {
   const here = dirname(fileURLToPath(import.meta.url))
-  const candidates = [
-    join(here, '..', 'migrations'), // source/vitest: <pkg>/src/..
-    join(here, 'migrations'),
-    // bundled MCP server: <root>/packages/mcp-server/dist → repo root
-    join(here, '..', '..', '..', 'packages', 'database', 'migrations'),
-    // packaged Electron app (resourcesPath is defined only under Electron)
+  const candidates: string[] = [join(here, '..', 'migrations'), join(here, 'migrations')]
+  let dir = here
+  for (let i = 0; i < 8; i++) {
+    dir = dirname(dir)
+    candidates.push(join(dir, 'packages', 'database', 'migrations'))
+  }
+  if (
     typeof process !== 'undefined' &&
     (process as unknown as { resourcesPath?: string }).resourcesPath
-      ? join((process as unknown as { resourcesPath: string }).resourcesPath, 'migrations')
-      : ''
-  ].filter(Boolean)
+  ) {
+    candidates.push(
+      join((process as unknown as { resourcesPath: string }).resourcesPath, 'migrations')
+    )
+  }
   for (const c of candidates) {
     if (existsSync(c)) return c
   }
