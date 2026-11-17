@@ -19,26 +19,26 @@
 | **Agent onboarding** | **Conversation search** |
 | ![Agents](docs/screenshots/agents.png) | ![Conversations](docs/screenshots/conversations.png) |
 
-状态：**Beta（v0.1.0-beta.1）**。V1 只做 ZCode + Codex 适配器；Claude Code / Cursor 适配器接口已预留。
+Status: **Beta (v0.2.0-beta.1)**. Supports ZCode, Codex and Claude Code; adapter interfaces for more agents are reserved.
 
-## Windows 安装包（Beta）
+## Windows installer (Beta)
 
-从 [Releases](../../releases) 下载 `cross-agent-sync-*-setup.exe`：
+Download `cross-agent-sync-*-setup.exe` from [Releases](../../releases):
 
-- **未签名构建**：首次运行可能遇到 SmartScreen / Smart App Control 提示——点「更多信息 → 仍要运行」；SAC 强制模式用户如被硬拦，请用 SHA-256 校验文件后暂时改用源码运行（`pnpm dev`）。正式版将接入免费开源签名（SignPath）。
-- 安装后数据保存在 `%APPDATA%/Cross-Agent Sync/`，纯本地无上报。
+- **Unsigned build**: SmartScreen may warn on first run — "More info → Run anyway". If Smart App Control blocks it, verify the SHA-256 in the release notes and run from source (`pnpm dev`) for now. A signed build via SignPath is planned.
+- Data lives in `%APPDATA%/Cross-Agent Sync/` — local only, no telemetry.
 
-## 开发
+## Development
 
 ```bash
 pnpm install
-pnpm dev          # 启动桌面应用
-pnpm test         # vitest（10 包单测）
+pnpm dev          # launch the desktop app
+pnpm test         # vitest (12 packages)
 pnpm typecheck && pnpm lint
-pnpm --filter @cross-agent-sync/desktop e2e   # Playwright E2E（5 流程）
+pnpm --filter @cross-agent-sync/desktop e2e   # Playwright E2E (5 flows)
 ```
 
-要求：Node ≥ 22、pnpm 11。
+Requires Node ≥ 22 and pnpm 11.
 
 ## License
 
