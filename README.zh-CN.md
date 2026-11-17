@@ -25,7 +25,7 @@
 
 从 [Releases](../../releases) 下载 `cross-agent-sync-*-setup.exe`：
 
-- **未签名构建**：首次运行可能遇到 SmartScreen / Smart App Control 提示——点「更多信息 → 仍要运行」；SAC 强制模式用户如被硬拦，请用 SHA-256 校验文件后暂时改用源码运行（`pnpm dev`）。正式版将接入免费开源签名（SignPath）。
+- **未签名构建**：首次运行可能遇到 SmartScreen / Smart App Control 提示——点「更多信息 → 仍要运行」；SAC 强制模式用户如被硬拦，请用 SHA-256 校验文件后暂时改用源码运行（`pnpm dev`）。Windows 构建使用由 **SignPath Foundation** 提供的证书进行代码签名。
 - 安装后数据保存在 `%APPDATA%/Cross-Agent Sync/`，纯本地无上报。
 
 ## 开发

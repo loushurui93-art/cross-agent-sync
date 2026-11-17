@@ -25,7 +25,7 @@ Status: **Beta (v0.2.0-beta.1)**. Supports ZCode, Codex and Claude Code; adapter
 
 Download `cross-agent-sync-*-setup.exe` from [Releases](../../releases):
 
-- **Unsigned build**: SmartScreen may warn on first run — "More info → Run anyway". If Smart App Control blocks it, verify the SHA-256 in the release notes and run from source (`pnpm dev`) for now. A signed build via SignPath is planned.
+- **Unsigned build**: SmartScreen may warn on first run — "More info → Run anyway". If Smart App Control blocks it, verify the SHA-256 in the release notes and run from source (`pnpm dev`) for now. Windows builds are code-signed using a certificate provided by the **SignPath Foundation**.
 - Data lives in `%APPDATA%/Cross-Agent Sync/` — local only, no telemetry.
 
 ## Development
