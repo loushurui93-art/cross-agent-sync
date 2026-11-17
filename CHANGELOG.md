@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.2] - 2026-11-18
+
+### Fixed
+
+- **"检查更新"崩溃**（`TypeError: Cannot read properties of undefined (reading 'code')`）— the
+  updater IPC handlers returned a raw state object instead of the standard
+  `{ok, data}` envelope every other handler uses; the renderer's envelope
+  unwrapping then crashed. All updater handlers now return the envelope.
+- **Reliable result** — the check now awaits `checkForUpdates()` and compares
+  versions explicitly (prerelease-aware) instead of racing event callbacks.
+
 ## [0.2.1] - 2026-11-18
 
 ### Fixed
