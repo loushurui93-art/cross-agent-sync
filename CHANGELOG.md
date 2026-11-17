@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.3] - 2026-11-18
+
+### Fixed
+
+- **检查更新仍报错**（`Cannot set properties of undefined (setting 'autoDownload')`）— under
+  the ESM main bundle, `import('electron-updater')` can hide the CJS `autoUpdater`
+  export behind `default`; the import now resolves both shapes explicitly and
+  throws a clear error if neither exists. Verified end-to-end in the real app:
+  the button now completes with "已是最新版本（v0.2.2）" or a clean network error.
+- The update check also runs in dev mode now (harmless, aids verification).
+
 ## [0.2.2] - 2026-11-18
 
 ### Fixed

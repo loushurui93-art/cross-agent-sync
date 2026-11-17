@@ -50,6 +50,12 @@ function err(e: unknown): { ok: false; error: { code: string; message: string } 
   return { ok: false, error: { code: 'UPDATE_ERROR', message: String(e) } }
 }
 
+/** Minimal surface of electron-updater's autoUpdater we rely on. */
+interface ElectronUpdaterLike {
+  autoDownload: boolean
+  checkForUpdates(): Promise<{ updateInfo?: { version?: string } } | null>
+}
+
 export function registerUpdaterIpc(): void {
   ipcMain.on('app:version', (e) => {
     e.returnValue = app.getVersion()
@@ -59,16 +65,16 @@ export function registerUpdaterIpc(): void {
 
   ipcMain.handle('update:check', async () => {
     try {
-      if (!app.isPackaged) {
-        const s: UpdateState = {
-          phase: 'error',
-          message: '开发模式不检查更新（仅打包版启用）'
-        }
-        setState(s)
-        return ok(s)
-      }
       setState({ phase: 'checking' })
-      const { autoUpdater } = await import('electron-updater')
+      // electron-updater is CJS; under an ESM main bundle the named export can
+      // hide behind `default` depending on cjs-module-lexer detection — resolve
+      // both shapes explicitly (v0.2.2 crashed exactly here).
+      const mod = (await import('electron-updater')) as unknown as {
+        autoUpdater?: ElectronUpdaterLike
+        default?: { autoUpdater?: ElectronUpdaterLike }
+      }
+      const autoUpdater = mod.autoUpdater ?? mod.default?.autoUpdater
+      if (!autoUpdater) throw new Error('electron-updater module did not expose autoUpdater')
       autoUpdater.autoDownload = false // beta: user opts in via the release page
       const result = (await autoUpdater.checkForUpdates()) as
         | { updateInfo?: { version?: string } }
