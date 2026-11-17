@@ -19,7 +19,7 @@
 | **Agent 一键接入** | **会话检索** |
 | ![Agent 接入](docs/screenshots/agents.png) | ![会话](docs/screenshots/conversations.png) |
 
-状态：**Beta（v0.2.0-beta.1）**。支持 ZCode + Codex + Claude Code 三个 Agent；Cursor 等适配器接口已预留。
+状态：**Beta（v0.2.1）**。支持 ZCode + Codex + Claude Code 三个 Agent；Cursor 等适配器接口已预留。
 
 ## Windows 安装包（Beta）
 

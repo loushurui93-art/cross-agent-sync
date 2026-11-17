@@ -19,7 +19,7 @@
 | **Agent onboarding** | **Conversation search** |
 | ![Agents](docs/screenshots/agents.png) | ![Conversations](docs/screenshots/conversations.png) |
 
-Status: **Beta (v0.2.0-beta.1)**. Supports ZCode, Codex and Claude Code; adapter interfaces for more agents are reserved.
+Status: **Beta (v0.2.1)**. Supports ZCode, Codex and Claude Code; adapter interfaces for more agents are reserved.
 
 ## Windows installer (Beta)
 
