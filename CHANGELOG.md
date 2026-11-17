@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1] - 2026-11-18
+
+### Fixed
+
+- **Conversation page filters now apply to the conversation list** (source +
+  time), not only to full-text search results — previously the dropdowns
+  appeared to do nothing unless a search query was entered.
+
+### Changed
+
+- Claude Code joins the import button and import summary (three sources).
+- List shows a "filtered / total" count with an explicit empty-filter state.
+
 ## [0.2.0-beta.1] - 2026-11-17
 
 Three agents, self-explaining first run, and self-maintenance.

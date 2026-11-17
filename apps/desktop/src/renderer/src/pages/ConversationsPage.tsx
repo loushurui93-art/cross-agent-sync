@@ -1,6 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ProjectRow } from '@cross-agent-sync/core'
-import { api, ApiError, type ConversationRow, type MessageRow, type SearchHit } from '../lib/api'
+import {
+  api,
+  ApiError,
+  type ConvProgress,
+  type ConversationRow,
+  type MessageRow,
+  type SearchHit
+} from '../lib/api'
 
 export default function ConversationsPage({
   active
@@ -15,11 +22,13 @@ export default function ConversationsPage({
   const [agentFilter, setAgentFilter] = useState('all')
   const [sinceDays, setSinceDays] = useState<number | null>(null)
   const [hits, setHits] = useState<SearchHit[] | null>(null)
+  /** live import progress (manual + background auto-import) */
+  const [progress, setProgress] = useState<ConvProgress | null>(null)
 
-  const refresh = async (): Promise<void> => {
+  const refresh = useCallback(async (): Promise<void> => {
     if (!active) return
     setRows(await api.conv.list(active.id))
-  }
+  }, [active])
 
   useEffect(() => {
     let cancelled = false
@@ -36,6 +45,41 @@ export default function ConversationsPage({
     }
   }, [active])
 
+  // live import progress: refresh the list whenever an import finishes,
+  // show a progress line while it runs (also covers background auto-import)
+  useEffect(() => {
+    const off = api.conv.onProgress((p) => {
+      if (p.phase === 'done') {
+        setProgress(null)
+        setBusy(false)
+        void refresh()
+        setSummary('后台导入已更新会话索引。')
+        return
+      }
+      setProgress(p)
+      if (p.done !== undefined && p.total !== undefined && p.done >= p.total) {
+        setProgress(null)
+        void refresh()
+      }
+    })
+    return off
+  }, [refresh])
+
+  // filters apply to both the conversation list and search hits; the cutoff
+  // timestamp is derived at render time by design (relative window)
+  const filteredRows = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- relative cutoff needs now()
+    const cutoff = sinceDays === null ? 0 : Date.now() - sinceDays * 86_400_000
+    return rows.filter((c) => {
+      if (agentFilter !== 'all' && c.agentId !== agentFilter) return false
+      if (cutoff) {
+        const t = c.startedAt ? new Date(c.startedAt).getTime() : 0
+        if (t < cutoff) return false
+      }
+      return true
+    })
+  }, [rows, agentFilter, sinceDays])
+
   if (!active) {
     return <div className="p-6 text-sm text-neutral-500">先在项目页选择或导入一个项目。</div>
   }
@@ -45,12 +89,18 @@ export default function ConversationsPage({
     setSummary(null)
     try {
       const s = await api.conv.import(active.id)
+      if ('busy' in s) {
+        setSummary('已有导入在进行中（可能是刚启动的后台导入），请稍候。')
+        return
+      }
       const fmt = (
         n: { imported: number; updated: number; alreadyImported: number },
         found: number
       ): string =>
         `新导入 ${n.imported} · 更新 ${n.updated} / 共 ${found}（未变 ${n.alreadyImported}）`
-      setSummary(`ZCode：${fmt(s.zcode, s.found.zcode)} · Codex：${fmt(s.codex, s.found.codex)}`)
+      setSummary(
+        `ZCode：${fmt(s.zcode, s.found.zcode)} · Codex：${fmt(s.codex, s.found.codex)} · Claude Code：${fmt(s.claudeCode, s.found.claudeCode)}`
+      )
       await refresh()
     } catch (e) {
       setSummary(e instanceof ApiError ? `${e.code}: ${e.message}` : String(e))
@@ -92,13 +142,35 @@ export default function ConversationsPage({
           disabled={busy}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-50"
         >
-          {busy ? '导入中…' : '从 ZCode / Codex 导入'}
+          {busy ? '导入中…' : '导入会话（ZCode / Codex / Claude Code）'}
         </button>
       </div>
       <p className="mb-4 text-xs text-neutral-500">
         只读扫描两边本地会话记录中属于「{active.name}
         」目录的部分，导入统一索引供搜索（不修改任何源数据）。
       </p>
+      {progress && progress.done !== undefined && progress.total !== undefined && (
+        <div className="mb-4 rounded border border-neutral-700 bg-neutral-900/60 px-4 py-3">
+          <div className="mb-2 flex items-center justify-between text-xs text-neutral-300">
+            <span>
+              正在导入{progress.projectName ? `「${progress.projectName}」` : ''}
+              {progress.agent ? ` · ${progress.agent}` : ''}
+            </span>
+            <span className="text-neutral-500">
+              {progress.done}/{progress.total}
+            </span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded bg-neutral-800">
+            <div
+              className="h-full bg-blue-500 transition-all"
+              style={{
+                width: `${Math.round((progress.done / Math.max(progress.total, 1)) * 100)}%`
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {summary && (
         <div className="mb-4 rounded border border-neutral-700 bg-neutral-900/60 px-4 py-2 text-xs text-neutral-300">
           {summary}
@@ -114,6 +186,7 @@ export default function ConversationsPage({
           <option value="all">全部来源</option>
           <option value="zcode">ZCode</option>
           <option value="codex">Codex</option>
+          <option value="claude-code">Claude Code</option>
         </select>
         <select
           value={sinceDays ?? ''}
@@ -162,8 +235,12 @@ export default function ConversationsPage({
         </div>
       )}
 
+      <div className="mb-2 text-xs text-neutral-500">
+        {filteredRows.length} / {rows.length} 个会话
+        {agentFilter !== 'all' || sinceDays !== null ? '（已按来源/时间筛选）' : ''}
+      </div>
       <div className="space-y-2">
-        {rows.map((c) => (
+        {filteredRows.map((c) => (
           <button
             key={c.id}
             onClick={() => showMessages(c)}
@@ -178,9 +255,11 @@ export default function ConversationsPage({
             </div>
           </button>
         ))}
-        {rows.length === 0 && (
+        {filteredRows.length === 0 && (
           <div className="rounded-lg border border-dashed border-neutral-800 p-6 text-center text-sm text-neutral-500">
-            还没有导入会话。点击右上角按钮开始。
+            {rows.length === 0
+              ? '还没有导入会话。点击右上角按钮开始。'
+              : '当前筛选条件下没有会话。'}
           </div>
         )}
       </div>

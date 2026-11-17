@@ -47,6 +47,15 @@ export interface ImportOptions {
   force?: boolean
   /** Where to keep the codex scan cache (recommended: userData). */
   scanCachePath?: string
+  /** Progress hook: called after enumeration and after each conversation. */
+  onProgress?: (p: ImportProgress) => void
+}
+
+export interface ImportProgress {
+  agent: AgentId | 'all'
+  done: number
+  total: number
+  title: string
 }
 
 export type { AgentId }
@@ -112,6 +121,15 @@ export async function importProjectConversations(
   }
 
   // ---- chunked load + import (yields between conversations) -------------
+  const totalAll = zAll.length + cMatched.length + kMatched.length
+  let doneAll = 0
+  opts.onProgress?.({
+    agent: 'all',
+    done: 0,
+    total: totalAll,
+    title: project.rootPath
+  })
+
   const importChunked = async (
     agentId: AgentId,
     sources: Array<{ externalId: string; sourcePath: string }>,
@@ -120,6 +138,7 @@ export async function importProjectConversations(
     const summary = emptySummary()
     const skip = opts.force ? new Set<string>() : alreadyImported(db, project.id, agentId)
     const todo = sources.filter((s) => !skip.has(s.externalId)).slice(0, limit)
+    let done = 0
     for (const s of todo) {
       await yieldToEventLoop()
       try {
@@ -133,6 +152,14 @@ export async function importProjectConversations(
         console.warn(`[import] ${agentId}:${s.externalId} failed:`, e)
         summary.empty++
       }
+      done++
+      doneAll++
+      opts.onProgress?.({
+        agent: agentId,
+        done: doneAll,
+        total: totalAll,
+        title: s.externalId
+      })
     }
     return summary
   }

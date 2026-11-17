@@ -69,14 +69,23 @@ const api = {
       >
   },
   conv: {
-    import: (projectId: string) =>
-      ipcRenderer.invoke('conv:import', { projectId, force: true }) as Promise<IpcResult<unknown>>,
+    import: (projectId: string, force = true) =>
+      ipcRenderer.invoke('conv:import', {
+        projectId,
+        force
+      }) as Promise<IpcResult<unknown>>,
     list: (projectId: string) =>
       ipcRenderer.invoke('conv:list', { projectId }) as Promise<IpcResult<unknown>>,
     messages: (conversationId: string) =>
       ipcRenderer.invoke('conv:messages', { conversationId }) as Promise<IpcResult<unknown>>,
     search: (q: { query: string; projectId?: string; limit?: number }) =>
-      ipcRenderer.invoke('conv:search', q) as Promise<IpcResult<unknown>>
+      ipcRenderer.invoke('conv:search', q) as Promise<IpcResult<unknown>>,
+    /** Live import progress from manual and background imports. */
+    onProgress: (cb: (p: unknown) => void): (() => void) => {
+      const h = (_e: unknown, p: unknown): void => cb(p)
+      ipcRenderer.on('conv:progress', h)
+      return () => ipcRenderer.removeListener('conv:progress', h)
+    }
   },
   files: {
     events: (projectId: string) =>

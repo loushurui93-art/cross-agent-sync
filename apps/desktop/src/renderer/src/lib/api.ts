@@ -77,15 +77,21 @@ export const api = {
   },
   conv: {
     import: (projectId: string, force = false) =>
-      call<{
-        zcode: { imported: number; updated: number; alreadyImported: number }
-        codex: { imported: number; updated: number; alreadyImported: number }
-        found: { zcode: number; codex: number }
-      }>(A.conv.import(projectId, force)),
+      call<
+        | {
+            zcode: { imported: number; updated: number; alreadyImported: number }
+            codex: { imported: number; updated: number; alreadyImported: number }
+            claudeCode: { imported: number; updated: number; alreadyImported: number }
+            found: { zcode: number; codex: number; claudeCode: number }
+          }
+        | { busy: true }
+      >(A.conv.import(projectId, force)),
     list: (projectId: string) => call<ConversationRow[]>(A.conv.list(projectId)),
     messages: (conversationId: string) => call<MessageRow[]>(A.conv.messages(conversationId)),
     search: (q: { query: string; projectId?: string; agentId?: string; sinceDays?: number }) =>
-      call<SearchHit[]>(A.conv.search(q))
+      call<SearchHit[]>(A.conv.search(q)),
+    /** Subscribe to live import progress (manual + background). Returns unsubscribe. */
+    onProgress: (cb: (p: ConvProgress) => void): (() => void) => A.conv.onProgress(cb)
   },
   files: {
     events: (projectId: string) => call<FileEventRow[]>(A.files.events(projectId)),
@@ -125,6 +131,15 @@ export interface DoctorFinding {
   name: string
   status: 'ok' | 'warn' | 'fail'
   detail?: string
+}
+
+export interface ConvProgress {
+  phase?: 'done'
+  agent?: string
+  done?: number
+  total?: number
+  title?: string
+  projectName?: string
 }
 
 export interface ConversationRow {
