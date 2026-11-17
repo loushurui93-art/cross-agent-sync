@@ -199,7 +199,7 @@ describe('import + dedup + search', () => {
 })
 
 describe('project import orchestration', () => {
-  it('picks only sessions whose cwd belongs to the project', () => {
+  it('picks only sessions whose cwd belongs to the project', async () => {
     const zhome = mkdtempSync(join(tmpdir(), 'cas-zhome-'))
     mkdirSync(join(zhome, 'cli', 'db'), { recursive: true })
     seedZcodeDb(join(zhome, 'cli', 'db', 'db.sqlite'), projectDir) // matches
@@ -209,7 +209,7 @@ describe('project import orchestration', () => {
     writeCodexRolloutIn(chome, projectDir) // matches
     writeCodexRolloutIn(chome, 'D:/elsewhere') // must be filtered out
 
-    const summary = importProjectConversations(
+    const summary = await importProjectConversations(
       db,
       { id: projectId, rootPath: projectDir },
       { zcodeHome: zhome, codexHome: chome }

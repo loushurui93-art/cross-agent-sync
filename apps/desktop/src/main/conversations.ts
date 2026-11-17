@@ -19,9 +19,9 @@ function scanCachePath(): string {
   return join(app.getPath('userData'), 'codex-scan-cache.json')
 }
 
-export function importForProject(db: Db, projectId: string, force = false): unknown {
+export async function importForProject(db: Db, projectId: string, force = false): Promise<unknown> {
   const p = core.getProject(db, projectId)
-  const summary = importProjectConversations(
+  const summary = await importProjectConversations(
     db,
     { id: p.id, rootPath: p.rootPath },
     { force, scanCachePath: scanCachePath() }
@@ -38,11 +38,11 @@ export function importForProject(db: Db, projectId: string, force = false): unkn
 }
 
 /** Startup / post-create hook: import every project, cheap mode. */
-export function autoImportAll(getDb: () => Db): void {
+export async function autoImportAll(getDb: () => Db): Promise<void> {
   try {
     for (const p of core.listProjects(getDb())) {
       try {
-        const s = importProjectConversations(
+        const s = await importProjectConversations(
           getDb(),
           { id: p.id, rootPath: p.rootPath },
           { scanCachePath: scanCachePath() }

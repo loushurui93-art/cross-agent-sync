@@ -11,6 +11,14 @@
 - 📁 **Project 变化**：文件增删改事件 + Git 只读状态
 - 🔒 **Local-first**：数据在本机；修改任何 Agent 配置前先备份、可恢复；导入内容视为不可信数据
 
+## Screenshots
+
+| Dashboard | Context editor |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Context](docs/screenshots/context.png) |
+| **Agent onboarding** | **Conversation search** |
+| ![Agents](docs/screenshots/agents.png) | ![Conversations](docs/screenshots/conversations.png) |
+
 状态：**Beta（v0.1.0-beta.1）**。V1 只做 ZCode + Codex 适配器；Claude Code / Cursor 适配器接口已预留。
 
 ## Windows 安装包（Beta）

@@ -11,6 +11,14 @@
 - 📁 **项目变化**：文件增删改事件 + Git 只读状态
 - 🔒 **本地优先**：数据不出本机；修改任何 Agent 配置前先备份、可恢复；导入内容视为不可信数据
 
+## 界面预览
+
+| 仪表盘 | 上下文编辑器 |
+|---|---|
+| ![仪表盘](docs/screenshots/dashboard.png) | ![上下文](docs/screenshots/context.png) |
+| **Agent 一键接入** | **会话检索** |
+| ![Agent 接入](docs/screenshots/agents.png) | ![会话](docs/screenshots/conversations.png) |
+
 状态：**Beta（v0.1.0-beta.1）**。V1 只做 ZCode + Codex 适配器；Claude Code / Cursor 适配器接口已预留。
 
 ## Windows 安装包（Beta）
