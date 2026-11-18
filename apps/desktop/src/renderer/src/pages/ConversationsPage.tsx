@@ -169,9 +169,10 @@ export default function ConversationsPage({
       </p>
       <button
         onClick={() => setShowAdvanced((v) => !v)}
-        className="mb-2 text-xs text-neutral-500 hover:text-neutral-300"
+        className="mb-3 flex w-full items-center justify-between rounded border border-neutral-700 bg-neutral-900/60 px-4 py-2.5 text-sm text-neutral-200 hover:border-neutral-500"
       >
-        {showAdvanced ? '▾' : '▸'} 高级：实验会话散落在其他目录？指定额外目录和标题关键词
+        <span>高级导入选项 —— 会话散落在其他目录 / 导入全部历史</span>
+        <span className="text-xs text-neutral-500">{showAdvanced ? '收起 ▾' : '展开 ▸'}</span>
       </button>
       {showAdvanced && (
         <div className="mb-3 space-y-2">
