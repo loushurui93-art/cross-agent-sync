@@ -71,13 +71,19 @@ const api = {
   conv: {
     import: (
       projectId: string,
-      opts: { force?: boolean; matchDirs?: string[]; titleKeywords?: string[] } = {}
+      opts: {
+        force?: boolean
+        matchDirs?: string[]
+        titleKeywords?: string[]
+        allHistory?: boolean
+      } = {}
     ) =>
       ipcRenderer.invoke('conv:import', {
         projectId,
         force: opts.force ?? true,
         matchDirs: opts.matchDirs,
-        titleKeywords: opts.titleKeywords
+        titleKeywords: opts.titleKeywords,
+        allHistory: opts.allHistory
       }) as Promise<IpcResult<unknown>>,
     list: (projectId: string) =>
       ipcRenderer.invoke('conv:list', { projectId }) as Promise<IpcResult<unknown>>,

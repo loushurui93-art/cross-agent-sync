@@ -78,7 +78,12 @@ export const api = {
   conv: {
     import: (
       projectId: string,
-      opts: { force?: boolean; matchDirs?: string[]; titleKeywords?: string[] } = {}
+      opts: {
+        force?: boolean
+        matchDirs?: string[]
+        titleKeywords?: string[]
+        allHistory?: boolean
+      } = {}
     ) =>
       call<
         | {

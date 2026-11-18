@@ -33,7 +33,12 @@ function broadcastProgress(p: unknown): void {
 export async function importForProject(
   db: Db,
   projectId: string,
-  opts: { force?: boolean; matchDirs?: string[]; titleKeywords?: string[] } = {}
+  opts: {
+    force?: boolean
+    matchDirs?: string[]
+    titleKeywords?: string[]
+    allHistory?: boolean
+  } = {}
 ): Promise<unknown> {
   if (importRunning) return { busy: true }
   const p = core.getProject(db, projectId)
@@ -46,6 +51,7 @@ export async function importForProject(
         force: opts.force,
         matchDirs: opts.matchDirs,
         titleKeywords: opts.titleKeywords,
+        allHistory: opts.allHistory,
         scanCachePath: scanCachePath(),
         onProgress: (prog) => broadcastProgress({ ...prog, projectName: p.name })
       }

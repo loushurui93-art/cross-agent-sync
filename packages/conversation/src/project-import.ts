@@ -61,6 +61,12 @@ export interface ImportOptions {
    * project-root matches always import).
    */
   titleKeywords?: string[]
+  /**
+   * Import EVERY session from all agents regardless of cwd — for sessions
+   * without a clear project home (archive use-case). Title keywords still
+   * apply as an optional narrow filter.
+   */
+  allHistory?: boolean
 }
 
 export interface ImportProgress {
@@ -106,13 +112,18 @@ export async function importProjectConversations(
   const root = normalize(project.rootPath)
   // extra directories whose sessions also belong to this project
   const dirs = [root, ...(opts.matchDirs ?? []).map(normalize)]
+  const allHistory = opts.allHistory === true
 
   const cwdMatches = (cwd: string): boolean => {
+    if (allHistory) return true
     const c = normalize(cwd)
     return dirs.some((d) => c === d || c.startsWith(`${d}/`))
   }
-  /** extra-dir matches must also pass the keyword filter; project-root matches always import */
-  const rootMatched = (cwd: string): boolean => normalize(cwd) === root
+  /**
+   * Keyword filter applies to every source in allHistory mode, and to
+   * extra-dir matches in project mode; project-root matches always import.
+   */
+  const rootMatched = (cwd: string): boolean => !allHistory && normalize(cwd) === root
 
   // ---- enumerate sources (cheap; cache-accelerated) ---------------------
   const zDbPath = join(zhome, 'cli', 'db', 'db.sqlite')

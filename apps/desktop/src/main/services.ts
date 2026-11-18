@@ -140,7 +140,8 @@ export function registerIpc(): void {
     conversationsMod.importForProject(db(), input.projectId, {
       force: input.force,
       matchDirs: input.matchDirs,
-      titleKeywords: input.titleKeywords
+      titleKeywords: input.titleKeywords,
+      allHistory: input.allHistory
     })
   )
   on('conv:list', ProjectIdSchema, (input) =>

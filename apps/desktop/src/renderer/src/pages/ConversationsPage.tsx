@@ -27,6 +27,7 @@ export default function ConversationsPage({
   /** advanced import scope: extra directories + title keyword filter */
   const [extraDirs, setExtraDirs] = useState('')
   const [keywords, setKeywords] = useState('')
+  const [allHistory, setAllHistory] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -102,7 +103,8 @@ export default function ConversationsPage({
         .filter(Boolean)
       const s = await api.conv.import(active.id, {
         force: true,
-        matchDirs: extra.length > 0 ? extra : undefined,
+        allHistory: allHistory,
+        matchDirs: allHistory ? undefined : extra.length > 0 ? extra : undefined,
         titleKeywords: kws.length > 0 ? kws : undefined
       })
       if ('busy' in s) {
@@ -172,19 +174,32 @@ export default function ConversationsPage({
         {showAdvanced ? '▾' : '▸'} 高级：实验会话散落在其他目录？指定额外目录和标题关键词
       </button>
       {showAdvanced && (
-        <div className="mb-3 grid grid-cols-2 gap-2">
-          <input
-            value={extraDirs}
-            onChange={(e) => setExtraDirs(e.target.value)}
-            placeholder="额外扫描目录（分号分隔），如 C:\Users\LSR\Downloads"
-            className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs outline-none focus:border-neutral-500"
-          />
-          <input
-            value={keywords}
-            onChange={(e) => setKeywords(e.target.value)}
-            placeholder="只要标题/首条包含的关键词（空格分隔），如 实验"
-            className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs outline-none focus:border-neutral-500"
-          />
+        <div className="mb-3 space-y-2">
+          <label className="flex items-center gap-2 text-xs text-neutral-300">
+            <input
+              type="checkbox"
+              checked={allHistory}
+              onChange={(e) => setAllHistory(e.target.checked)}
+              className="accent-blue-500"
+            />
+            导入全部历史（不限目录）——把三家 Agent 的所有会话都收进这个项目的索引
+          </label>
+          {!allHistory && (
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                value={extraDirs}
+                onChange={(e) => setExtraDirs(e.target.value)}
+                placeholder="额外扫描目录（分号分隔），如 C:\Users\LSR\Downloads"
+                className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs outline-none focus:border-neutral-500"
+              />
+              <input
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                placeholder="只要标题/首条包含的关键词（空格分隔），如 实验"
+                className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs outline-none focus:border-neutral-500"
+              />
+            </div>
+          )}
         </div>
       )}
       {progress && progress.done !== undefined && progress.total !== undefined && (

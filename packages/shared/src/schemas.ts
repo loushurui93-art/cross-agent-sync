@@ -73,7 +73,9 @@ export const ConversationImportSchema = ProjectIdSchema.extend({
   /** extra directories whose sessions belong to this project */
   matchDirs: z.array(z.string().trim().min(1).max(500)).max(10).optional(),
   /** only import extra-dir sessions whose title/first message contains one of these */
-  titleKeywords: z.array(z.string().trim().min(1).max(100)).max(10).optional()
+  titleKeywords: z.array(z.string().trim().min(1).max(100)).max(10).optional(),
+  /** import every session from all agents regardless of cwd (archive mode) */
+  allHistory: z.boolean().optional()
 })
 
 export const ConversationSearchSchema = z.object({
