@@ -68,6 +68,14 @@ export const TaskUpdateSchema = ProjectIdSchema.extend({
 
 export const AgentKindSchema = z.enum(AGENT_KINDS)
 
+export const ConversationImportSchema = ProjectIdSchema.extend({
+  force: z.boolean().optional(),
+  /** extra directories whose sessions belong to this project */
+  matchDirs: z.array(z.string().trim().min(1).max(500)).max(10).optional(),
+  /** only import extra-dir sessions whose title/first message contains one of these */
+  titleKeywords: z.array(z.string().trim().min(1).max(100)).max(10).optional()
+})
+
 export const ConversationSearchSchema = z.object({
   query: z.string().trim().min(1).max(200),
   projectId: z.string().min(1).optional(),

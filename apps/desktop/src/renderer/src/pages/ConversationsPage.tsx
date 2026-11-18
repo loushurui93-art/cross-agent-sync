@@ -24,6 +24,10 @@ export default function ConversationsPage({
   const [hits, setHits] = useState<SearchHit[] | null>(null)
   /** live import progress (manual + background auto-import) */
   const [progress, setProgress] = useState<ConvProgress | null>(null)
+  /** advanced import scope: extra directories + title keyword filter */
+  const [extraDirs, setExtraDirs] = useState('')
+  const [keywords, setKeywords] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!active) return
@@ -88,7 +92,19 @@ export default function ConversationsPage({
     setBusy(true)
     setSummary(null)
     try {
-      const s = await api.conv.import(active.id)
+      const extra = extraDirs
+        .split(/[;,\n]/)
+        .map((d) => d.trim())
+        .filter(Boolean)
+      const kws = keywords
+        .split(/[;,\s]/)
+        .map((k) => k.trim())
+        .filter(Boolean)
+      const s = await api.conv.import(active.id, {
+        force: true,
+        matchDirs: extra.length > 0 ? extra : undefined,
+        titleKeywords: kws.length > 0 ? kws : undefined
+      })
       if ('busy' in s) {
         setSummary('已有导入在进行中（可能是刚启动的后台导入），请稍候。')
         return
@@ -145,10 +161,32 @@ export default function ConversationsPage({
           {busy ? '导入中…' : '导入会话（ZCode / Codex / Claude Code）'}
         </button>
       </div>
-      <p className="mb-4 text-xs text-neutral-500">
-        只读扫描两边本地会话记录中属于「{active.name}
+      <p className="mb-3 text-xs text-neutral-500">
+        只读扫描三家本地会话记录中属于「{active.name}
         」目录的部分，导入统一索引供搜索（不修改任何源数据）。
       </p>
+      <button
+        onClick={() => setShowAdvanced((v) => !v)}
+        className="mb-2 text-xs text-neutral-500 hover:text-neutral-300"
+      >
+        {showAdvanced ? '▾' : '▸'} 高级：实验会话散落在其他目录？指定额外目录和标题关键词
+      </button>
+      {showAdvanced && (
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          <input
+            value={extraDirs}
+            onChange={(e) => setExtraDirs(e.target.value)}
+            placeholder="额外扫描目录（分号分隔），如 C:\Users\LSR\Downloads"
+            className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs outline-none focus:border-neutral-500"
+          />
+          <input
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
+            placeholder="只要标题/首条包含的关键词（空格分隔），如 实验"
+            className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs outline-none focus:border-neutral-500"
+          />
+        </div>
+      )}
       {progress && progress.done !== undefined && progress.total !== undefined && (
         <div className="mb-4 rounded border border-neutral-700 bg-neutral-900/60 px-4 py-3">
           <div className="mb-2 flex items-center justify-between text-xs text-neutral-300">

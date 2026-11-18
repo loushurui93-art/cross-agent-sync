@@ -76,9 +76,9 @@ export function registerUpdaterIpc(): void {
       const autoUpdater = mod.autoUpdater ?? mod.default?.autoUpdater
       if (!autoUpdater) throw new Error('electron-updater module did not expose autoUpdater')
       autoUpdater.autoDownload = false // beta: user opts in via the release page
-      const result = (await autoUpdater.checkForUpdates()) as
-        | { updateInfo?: { version?: string } }
-        | null
+      const result = (await autoUpdater.checkForUpdates()) as {
+        updateInfo?: { version?: string }
+      } | null
       const latest = String(result?.updateInfo?.version ?? '')
       const current = app.getVersion()
       if (!latest || !isNewer(latest, current)) {

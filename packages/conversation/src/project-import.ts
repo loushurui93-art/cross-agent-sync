@@ -49,6 +49,18 @@ export interface ImportOptions {
   scanCachePath?: string
   /** Progress hook: called after enumeration and after each conversation. */
   onProgress?: (p: ImportProgress) => void
+  /**
+   * Extra directories whose sessions belong to this project even though
+   * their recorded cwd differs from the project root (real-world case: the
+   * experiment was scattered across directories).
+   */
+  matchDirs?: string[]
+  /**
+   * When set, only conversations whose title or first user text contains at
+   * least one of these keywords are imported (applies to extra-dir matches;
+   * project-root matches always import).
+   */
+  titleKeywords?: string[]
 }
 
 export interface ImportProgress {
@@ -92,25 +104,28 @@ export async function importProjectConversations(
   const chome = opts.codexHome ?? join(homedir(), '.codex')
   const claudeHome = opts.claudeHome ?? join(homedir(), '.claude')
   const root = normalize(project.rootPath)
+  // extra directories whose sessions also belong to this project
+  const dirs = [root, ...(opts.matchDirs ?? []).map(normalize)]
+
+  const cwdMatches = (cwd: string): boolean => {
+    const c = normalize(cwd)
+    return dirs.some((d) => c === d || c.startsWith(`${d}/`))
+  }
+  /** extra-dir matches must also pass the keyword filter; project-root matches always import */
+  const rootMatched = (cwd: string): boolean => normalize(cwd) === root
 
   // ---- enumerate sources (cheap; cache-accelerated) ---------------------
   const zDbPath = join(zhome, 'cli', 'db', 'db.sqlite')
-  const zAll = listZcodeSessions(zDbPath).filter((s) => normalize(s.cwd) === root)
+  const zAll = listZcodeSessions(zDbPath).filter((s) => cwdMatches(s.cwd))
 
   let cache: ScanCache | undefined
   if (opts.scanCachePath) {
     cache = loadScanCacheFile(opts.scanCachePath)
   }
   const cAll = listCodexThreads(join(chome, 'sessions'), undefined, cache)
-  const cMatched = cAll.filter((t) => {
-    const c = normalize(t.cwd)
-    return c === root || c.startsWith(`${root}/`)
-  })
+  const cMatched = cAll.filter((t) => cwdMatches(t.cwd))
   const kAll = listClaudeSessions(claudeHome, undefined, cache)
-  const kMatched = kAll.filter((t) => {
-    const c = normalize(t.cwd)
-    return c === root || c.startsWith(`${root}/`)
-  })
+  const kMatched = kAll.filter((t) => cwdMatches(t.cwd))
   if (opts.scanCachePath && cache) {
     // prune entries for sources that no longer exist, then persist
     const alive = new Set([...cAll, ...kAll].map((t) => t.sourcePath))
@@ -132,17 +147,38 @@ export async function importProjectConversations(
 
   const importChunked = async (
     agentId: AgentId,
-    sources: Array<{ externalId: string; sourcePath: string }>,
+    sources: Array<{ externalId: string; sourcePath: string; cwd: string }>,
     load: (s: { externalId: string; sourcePath: string }) => Parameters<typeof importConversation>[3]
   ): Promise<ImportSummary> => {
     const summary = emptySummary()
     const skip = opts.force ? new Set<string>() : alreadyImported(db, project.id, agentId)
     const todo = sources.filter((s) => !skip.has(s.externalId)).slice(0, limit)
+    const keywords = opts.titleKeywords?.map((k) => k.toLowerCase()).filter(Boolean) ?? null
     let done = 0
     for (const s of todo) {
       await yieldToEventLoop()
       try {
-        const r = importConversation(db, project.id, agentId, load(s))
+        const conv = load(s)
+        // keyword filter applies only to extra-dir matches; the project root's
+        // own sessions always import
+        if (keywords && !rootMatched(s.cwd)) {
+          const firstUser = conv.messages.find((m) => m.role === 'user')
+          const hay =
+            `${conv.title}\n` +
+            (firstUser?.parts ?? []).map((p) => p.text ?? '').join(' ')
+          if (!keywords.some((k) => hay.toLowerCase().includes(k))) {
+            done++
+            doneAll++
+            opts.onProgress?.({
+              agent: agentId,
+              done: doneAll,
+              total: totalAll,
+              title: s.externalId
+            })
+            continue
+          }
+        }
+        const r = importConversation(db, project.id, agentId, conv)
         if (r.updated) summary.updated++
         else if (r.imported) summary.imported++
         else if (r.reason === 'already-imported') summary.alreadyImported++
@@ -164,13 +200,19 @@ export async function importProjectConversations(
     return summary
   }
 
-  const zSummary = await importChunked('zcode', zAll, (s) =>
-    loadZcodeSession(zDbPath, s.externalId)
+  const zSummary = await importChunked(
+    'zcode',
+    zAll.map((s) => ({ externalId: s.externalId, sourcePath: s.sourcePath, cwd: s.cwd })),
+    (s) => loadZcodeSession(zDbPath, s.externalId)
   )
-  const cSummary = await importChunked('codex', cMatched, (s) => loadCodexThread(s.sourcePath))
+  const cSummary = await importChunked(
+    'codex',
+    cMatched.map((t) => ({ externalId: t.externalId, sourcePath: t.sourcePath, cwd: t.cwd })),
+    (s) => loadCodexThread(s.sourcePath)
+  )
   const kSummary = await importChunked(
     'claude-code',
-    kMatched,
+    kMatched.map((t) => ({ externalId: t.externalId, sourcePath: t.sourcePath, cwd: t.cwd })),
     (s) => loadClaudeSession(s.sourcePath)
   )
 

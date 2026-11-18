@@ -14,6 +14,7 @@ import {
   appError,
   ContextGetSchema,
   ContextSaveSchema,
+  ConversationImportSchema,
   ConversationMessagesSchema,
   ConversationSearchSchema,
   McpPlanSchema,
@@ -92,7 +93,7 @@ export function registerIpc(): void {
     // UI renders first — a cold codex scan can take a few seconds)
     setTimeout(() => {
       try {
-        conversationsMod.importForProject(db(), p.id, false)
+        void conversationsMod.importForProject(db(), p.id, { force: false })
       } catch (e) {
         console.warn('[main] post-create import failed:', e)
       }
@@ -135,8 +136,12 @@ export function registerIpc(): void {
     applyMcp(input.projectId, input.agentId, input.expectedHash)
   )
 
-  on('conv:import', ProjectIdSchema, (input) =>
-    conversationsMod.importForProject(db(), input.projectId, true)
+  on('conv:import', ConversationImportSchema, (input) =>
+    conversationsMod.importForProject(db(), input.projectId, {
+      force: input.force,
+      matchDirs: input.matchDirs,
+      titleKeywords: input.titleKeywords
+    })
   )
   on('conv:list', ProjectIdSchema, (input) =>
     conversationsMod.listForProject(db(), input.projectId)

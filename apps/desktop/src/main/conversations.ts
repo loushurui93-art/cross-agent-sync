@@ -30,7 +30,11 @@ function broadcastProgress(p: unknown): void {
   }
 }
 
-export async function importForProject(db: Db, projectId: string, force = false): Promise<unknown> {
+export async function importForProject(
+  db: Db,
+  projectId: string,
+  opts: { force?: boolean; matchDirs?: string[]; titleKeywords?: string[] } = {}
+): Promise<unknown> {
   if (importRunning) return { busy: true }
   const p = core.getProject(db, projectId)
   importRunning = true
@@ -39,7 +43,9 @@ export async function importForProject(db: Db, projectId: string, force = false)
       db,
       { id: p.id, rootPath: p.rootPath },
       {
-        force,
+        force: opts.force,
+        matchDirs: opts.matchDirs,
+        titleKeywords: opts.titleKeywords,
         scanCachePath: scanCachePath(),
         onProgress: (prog) => broadcastProgress({ ...prog, projectName: p.name })
       }
@@ -47,7 +53,7 @@ export async function importForProject(db: Db, projectId: string, force = false)
     core.logAudit(db, {
       projectId,
       actorType: 'user',
-      action: force ? 'conversations.imported' : 'conversations.autoImported',
+      action: opts.force ? 'conversations.imported' : 'conversations.autoImported',
       targetType: 'project',
       targetId: projectId,
       details: summary as unknown as Record<string, unknown>

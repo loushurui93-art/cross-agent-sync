@@ -76,7 +76,10 @@ export const api = {
       )
   },
   conv: {
-    import: (projectId: string, force = false) =>
+    import: (
+      projectId: string,
+      opts: { force?: boolean; matchDirs?: string[]; titleKeywords?: string[] } = {}
+    ) =>
       call<
         | {
             zcode: { imported: number; updated: number; alreadyImported: number }
@@ -85,7 +88,7 @@ export const api = {
             found: { zcode: number; codex: number; claudeCode: number }
           }
         | { busy: true }
-      >(A.conv.import(projectId, force)),
+      >(A.conv.import(projectId, opts)),
     list: (projectId: string) => call<ConversationRow[]>(A.conv.list(projectId)),
     messages: (conversationId: string) => call<MessageRow[]>(A.conv.messages(conversationId)),
     search: (q: { query: string; projectId?: string; agentId?: string; sinceDays?: number }) =>
