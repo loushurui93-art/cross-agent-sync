@@ -8,6 +8,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { existsSync } from 'node:fs'
 import type { NormalizedConversation, NormalizedMessage, NormalizedPart, SourceSummary } from '../model'
+import { makeTitle } from './codex'
 
 export function listZcodeSessions(dbPath: string, cwd?: string): SourceSummary[] {
   if (!existsSync(dbPath)) return []
@@ -118,7 +119,7 @@ export function loadZcodeSession(dbPath: string, sessionId: string): NormalizedC
 
     return {
       externalId: sessionId,
-      title: String(session.title ?? '') || firstUserText(out) || '(untitled)',
+      title: makeTitle(String(session.title ?? '') || firstUserText(out)),
       sourcePath: dbPath,
       startedAt: Number(session.started ?? 0),
       messages: out

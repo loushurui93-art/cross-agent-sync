@@ -10,6 +10,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { NormalizedConversation, NormalizedPart, SourceSummary } from '../model'
+import { makeTitle } from './codex'
 import type { ScanCache } from './codex'
 
 interface ClaudeLine {
@@ -144,7 +145,7 @@ export function loadClaudeSession(abs: string): NormalizedConversation {
     messages.find((m) => m.role === 'user')?.parts?.find((p) => p.type === 'text')?.text ?? ''
   return {
     externalId: abs.split(/[\\/]/).pop()?.replace(/\.jsonl$/, '') ?? abs,
-    title: title || fallback.slice(0, 80) || '(untitled)',
+    title: title || makeTitle(fallback),
     sourcePath: abs,
     startedAt,
     messages

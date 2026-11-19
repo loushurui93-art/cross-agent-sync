@@ -332,14 +332,27 @@ export default function ConversationsPage({
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-auto p-4">
               {open.messages.map((m) => (
-                <div key={m.id} className="rounded border border-neutral-800 p-3">
-                  <div className="mb-1 text-xs text-neutral-500">
-                    {m.role}
-                    {m.timestamp ? ` · ${new Date(m.timestamp).toLocaleString()}` : ''}
+                <div
+                  key={m.id}
+                  className={`rounded border p-3 ${
+                    m.role === 'user'
+                      ? 'border-blue-900/60 bg-blue-950/20'
+                      : 'border-neutral-800 bg-neutral-950/40'
+                  }`}
+                >
+                  <div className="mb-1 flex items-center gap-2 text-xs text-neutral-500">
+                    <span
+                      className={`rounded px-1.5 py-0.5 ${
+                        m.role === 'user'
+                          ? 'bg-blue-900/60 text-blue-300'
+                          : 'bg-neutral-800 text-neutral-300'
+                      }`}
+                    >
+                      {m.role === 'user' ? '用户' : '助手'}
+                    </span>
+                    {m.timestamp ? new Date(m.timestamp).toLocaleString() : ''}
                   </div>
-                  <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">
-                    {m.content}
-                  </pre>
+                  <MessageBody content={m.content ?? ''} />
                 </div>
               ))}
             </div>
@@ -356,4 +369,53 @@ function highlight(snippet: string): string {
     .replace(/</g, '&lt;')
     .replace(/\[/g, '<span class="text-amber-300">')
     .replace(/\]/g, '</span>')
+}
+
+/**
+ * Readable message body: renders fenced code blocks as monospace blocks,
+ * [tool ...] lines as subdued chips, and the rest as pre-wrapped prose.
+ */
+function MessageBody({ content }: { content: string }): React.ReactElement {
+  const segments = content.split(/```/)
+  return (
+    <div className="space-y-2">
+      {segments.map((seg, i) => {
+        // odd segments are inside ``` fences
+        if (i % 2 === 1) {
+          return (
+            <pre
+              key={i}
+              className="overflow-x-auto rounded bg-neutral-900 p-3 font-mono text-xs leading-relaxed text-neutral-300"
+            >
+              {seg.replace(/^[a-zA-Z0-9_-]*\n/, '')}
+            </pre>
+          )
+        }
+        return (
+          <div key={i} className="space-y-1">
+            {seg.split('\n').map((line, j) => {
+              const tool = line.match(/^\[tool (.+?)\](.*)$/)
+              if (tool) {
+                return (
+                  <div
+                    key={j}
+                    className="truncate rounded bg-neutral-900/80 px-2 py-1 font-mono text-xs text-neutral-500"
+                    title={line}
+                  >
+                    🔧 {tool[1]} {tool[2].slice(0, 80)}
+                  </div>
+                )
+              }
+              if (!line.trim()) return <div key={j} className="h-1" />
+              return (
+                <p key={j} className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                  {line.replace(/^#+\s*/, '').replace(/^[-*]\s+/, '· ')}
+                </p>
+              )
+            })}
+          </div>
+        )
+      })}
+    </div>
+  )
 }

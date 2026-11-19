@@ -13,6 +13,8 @@ import {
   loadClaudeSession,
   loadCodexThread,
   loadZcodeSession,
+  cleanCodexUserText,
+  makeTitle,
   searchMessages
 } from '../src'
 
@@ -153,6 +155,45 @@ describe('claude source', () => {
     expect(all.some((p) => p.text?.includes('null check'))).toBe(true)
     expect(all.every((p) => !p.text?.includes('hidden reasoning'))).toBe(true)
     expect(all.every((p) => !p.text?.includes('sidechain noise'))).toBe(true)
+  })
+})
+
+describe('readability cleaning', () => {
+  it('strips environment/instruction/attachment boilerplate from user text', () => {
+    const dirty = [
+      '# AGENTS.md instructions for C:\\proj\\demo',
+      '',
+      '<INSTRUCTIONS>',
+      'Apply the following coding-agent behavioral guidelines...',
+      '</INSTRUCTIONS>',
+      '',
+      '<environment_context>',
+      '  <cwd>C:\\Users\\LSR\\Downloads</cwd>',
+      '  <shell>powershell</shell>',
+      '</environment_context>',
+      '',
+      '帮我分析实验数据'
+    ].join('\n')
+    expect(cleanCodexUserText(dirty)).toBe('帮我分析实验数据')
+  })
+
+  it('attachment headers keep the file list but drop the hashtag noise', () => {
+    const dirty = [
+      '# Files mentioned by the user:',
+      '',
+      '## 实验1-2026-09.pdf: C:/Users/LSR/Downloads/实验1.pdf',
+      '总结一下要点'
+    ].join('\n')
+    const cleaned = cleanCodexUserText(dirty)
+    expect(cleaned).toContain('实验1-2026-09.pdf')
+    expect(cleaned).not.toContain('# Files mentioned')
+    expect(cleaned).toContain('总结一下要点')
+  })
+
+  it('makeTitle collapses whitespace and caps length', () => {
+    expect(makeTitle('  你好，\n\n世界  ')).toBe('你好， 世界')
+    expect(makeTitle('x'.repeat(200)).length).toBe(80)
+    expect(makeTitle('')).toBe('(untitled)')
   })
 })
 

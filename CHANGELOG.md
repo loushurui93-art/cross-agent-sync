@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.6] - 2026-11-20
+
+### Fixed
+
+- **会话可读性改造** — imported conversations now read like the agent's own UI:
+  - Titles: stripped Codex boilerplate (`<environment_context>`, AGENTS.md
+    instruction blocks, `# Files mentioned` headers). Attachment-only
+    conversations are titled `[附件] 文件名`; normal ones use the first real
+    user sentence; Claude Code keeps its ai-title.
+  - Message bodies: Codex-injected environment/instruction/app-signal blocks
+    removed from user messages — the transcript shows what the user actually
+    typed.
+  - Conversation detail view: user/assistant bubbles color-coded, fenced code
+    blocks rendered monospace, `[tool …]` lines rendered as subdued chips.
+
 ## [0.2.5] - 2026-11-19
 
 ### Added

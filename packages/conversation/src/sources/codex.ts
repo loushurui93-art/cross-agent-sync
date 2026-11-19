@@ -129,10 +129,17 @@ export function loadCodexThread(path: string): NormalizedConversation {
     if (kind === 'message') {
       const role = String(p.role ?? '')
       const content = p.content as Array<Record<string, unknown>> | undefined
-      const text = (content ?? [])
+      let text = (content ?? [])
         .map((c) => String(c.text ?? ''))
         .filter(Boolean)
         .join('\n')
+      if (role === 'user') {
+        // Codex injects environment/instructions/attachment blocks as user
+        // messages — strip them so the transcript matches what the user
+        // actually typed (and titles stop looking like <environment_context>).
+        text = cleanCodexUserText(text)
+        if (!text) continue
+      }
       if (role === 'user' && text) {
         flushAssistant(buf, bufTs)
         buf = []
@@ -175,15 +182,59 @@ export function loadCodexThread(path: string): NormalizedConversation {
   }
   flushAssistant(buf, bufTs)
 
-  const title =
-    messages.find((m) => m.role === 'user')?.parts?.find((p) => p.type === 'text')?.text ?? ''
   return {
     externalId: id,
-    title: title.slice(0, 80) || '(untitled)',
+    title: codexTitleFrom(messages),
     sourcePath: path,
     startedAt,
     messages
   }
+}
+
+/**
+ * Remove Codex-injected boilerplate from user message text:
+ * - `<environment_context>...</environment_context>` blocks
+ * - `# AGENTS.md instructions ... <INSTRUCTIONS>...</INSTRUCTIONS>` blocks
+ * - `# Files mentioned by the user:` attachment headers (keep the list)
+ * - surrounding whitespace
+ */
+export function cleanCodexUserText(text: string): string {
+  let t = text
+  t = t.replace(/<environment_context>[\s\S]*?<\/environment_context>/gi, '')
+  t = t.replace(
+    /#\s*AGENTS\.md instructions[\s\S]*?<\/INSTRUCTIONS>\s*/gi,
+    ''
+  )
+  t = t.replace(/<INSTRUCTIONS>[\s\S]*?<\/INSTRUCTIONS>/gi, '')
+  // app/plugin signal tags (open-page etc.) — generic paired-tag sweep for
+  // the <external_...> family Codex injects on desktop sessions
+  t = t.replace(/<external_[a-z0-9_]+>[\s\S]*?<\/external_[a-z0-9_]+>/gi, '')
+  t = t.replace(/^#\s*Files mentioned by the user:\s*/i, '')
+  t = t.replace(/^##\s+/gm, '') // attachment list headers -> plain text
+  t = t.replace(/\n{3,}/g, '\n\n')
+  return t.trim()
+}
+
+/**
+ * Display title for a Codex conversation: prefer the first substantive user
+ * sentence; when the message is only an attachment list, use the first file
+ * name (e.g. 实验1-2026-09.pdf) instead of the boilerplate header.
+ */
+export function codexTitleFrom(messages: NormalizedMessage[]): string {
+  const first = messages.find((m) => m.role === 'user')
+  const text = (first?.parts ?? []).find((p) => p.type === 'text')?.text ?? ''
+  // attachment-only message: "xxx.pdf: path" lines
+  const lines = text.split('\n').filter(Boolean)
+  const nonAttach = lines.filter((l) => !/^[^:]+\.(pdf|pptx?|docx?|xlsx?|zip|md|py|ts|js):/i.test(l))
+  if (nonAttach.length > 0) return makeTitle(nonAttach[0])
+  const firstFile = lines[0]?.split(':')[0]?.trim()
+  return firstFile ? `[附件] ${firstFile.slice(0, 60)}` : '(untitled)'
+}
+
+/** Build a display title from the first real user text (one line, capped). */
+export function makeTitle(firstUserText: string): string {
+  const t = firstUserText.replace(/\s+/g, ' ').trim()
+  return t.slice(0, 80) || '(untitled)'
 }
 
 function readHeader(abs: string): { cwd?: string; updated: number; title: string } {
