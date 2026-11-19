@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.4] - 2026-11-19
+
+### Added
+
+- **Advanced import options** (Conversations page) — for sessions scattered
+  across directories or with no project home:
+  - extra scan directories (semicolon-separated) beyond the project root
+  - title/first-message keyword filter (applies to extra-dir matches)
+  - **导入全部历史（不限目录）** archive mode: pull every session from all
+    three agents into the current project's searchable index
+- The advanced section is now a clearly visible full-width toggle button.
+
 ## [0.2.3] - 2026-11-18
 
 ### Fixed
