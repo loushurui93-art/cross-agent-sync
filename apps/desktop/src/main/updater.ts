@@ -3,8 +3,9 @@
  * builds only — `pnpm dev` never checks. electron-builder emits the
  * latest.yml + blockmap alongside the installer on tagged CI builds.
  *
- * All handlers return the standard IpcResult envelope (bug fix: returning
- * the raw state crashed the renderer's envelope unwrapping).
+ * Flow: 检查更新 → auto-download in background (with percent) →
+ * "重启并安装" (quitAndInstall). All handlers return the standard
+ * IpcResult envelope; the renderer polls update:state while a download runs.
  */
 
 import { app, ipcMain, shell } from 'electron'
@@ -14,9 +15,12 @@ export type UpdateState =
   | { phase: 'checking' }
   | { phase: 'up-to-date'; version: string }
   | { phase: 'available'; version: string; releaseUrl: string | null }
+  | { phase: 'downloading'; version: string; percent: number }
+  | { phase: 'downloaded'; version: string }
   | { phase: 'error'; message: string }
 
 let lastState: UpdateState = { phase: 'idle' }
+let wired = false
 
 function setState(s: UpdateState): void {
   lastState = s
@@ -26,7 +30,6 @@ export function releaseUrlFor(version: string): string {
   return `https://github.com/loushurui93-art/cross-agent-sync/releases/tag/v${version}`
 }
 
-/** Open the release page — beta users download manually (no silent install). */
 export function openReleasePage(version: string): void {
   void shell.openExternal(releaseUrlFor(version))
 }
@@ -54,6 +57,46 @@ function err(e: unknown): { ok: false; error: { code: string; message: string } 
 interface ElectronUpdaterLike {
   autoDownload: boolean
   checkForUpdates(): Promise<{ updateInfo?: { version?: string } } | null>
+  on(event: string, cb: (arg?: unknown) => void): unknown
+  quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void
+}
+
+/**
+ * Resolve electron-updater's autoUpdater across CJS/ESM interop shapes
+ * (v0.2.2/v0.2.3 lesson: under an ESM main bundle the named export can hide
+ * behind `default`).
+ */
+async function loadAutoUpdater(): Promise<ElectronUpdaterLike> {
+  const mod = (await import('electron-updater')) as unknown as {
+    autoUpdater?: ElectronUpdaterLike
+    default?: { autoUpdater?: ElectronUpdaterLike }
+  }
+  const autoUpdater = mod.autoUpdater ?? mod.default?.autoUpdater
+  if (!autoUpdater) throw new Error('electron-updater module did not expose autoUpdater')
+  return autoUpdater
+}
+
+function wireEvents(autoUpdater: ElectronUpdaterLike): void {
+  if (wired) return
+  wired = true
+  autoUpdater.on('download-progress', (arg) => {
+    const p = arg as { percent?: number }
+    const st = lastState
+    if (st.phase === 'available' || st.phase === 'downloading') {
+      setState({
+        phase: 'downloading',
+        version: st.version,
+        percent: Math.round(p?.percent ?? 0)
+      })
+    }
+  })
+  autoUpdater.on('update-downloaded', (arg) => {
+    const info = arg as { version?: string }
+    setState({
+      phase: 'downloaded',
+      version: String(info?.version ?? (lastState as { version?: string }).version ?? '')
+    })
+  })
 }
 
 export function registerUpdaterIpc(): void {
@@ -66,16 +109,9 @@ export function registerUpdaterIpc(): void {
   ipcMain.handle('update:check', async () => {
     try {
       setState({ phase: 'checking' })
-      // electron-updater is CJS; under an ESM main bundle the named export can
-      // hide behind `default` depending on cjs-module-lexer detection — resolve
-      // both shapes explicitly (v0.2.2 crashed exactly here).
-      const mod = (await import('electron-updater')) as unknown as {
-        autoUpdater?: ElectronUpdaterLike
-        default?: { autoUpdater?: ElectronUpdaterLike }
-      }
-      const autoUpdater = mod.autoUpdater ?? mod.default?.autoUpdater
-      if (!autoUpdater) throw new Error('electron-updater module did not expose autoUpdater')
-      autoUpdater.autoDownload = false // beta: user opts in via the release page
+      const autoUpdater = await loadAutoUpdater()
+      autoUpdater.autoDownload = true // download in background; user clicks 重启安装
+      wireEvents(autoUpdater)
       const result = (await autoUpdater.checkForUpdates()) as {
         updateInfo?: { version?: string }
       } | null
@@ -86,6 +122,9 @@ export function registerUpdaterIpc(): void {
         setState(s)
         return ok(s)
       }
+      // an update exists; the background download is running. Return
+      // 'available' now — the renderer polls update:state to follow
+      // downloading → downloaded.
       const s: UpdateState = {
         phase: 'available',
         version: latest,
@@ -96,6 +135,18 @@ export function registerUpdaterIpc(): void {
     } catch (e) {
       const s: UpdateState = { phase: 'error', message: String(e) }
       setState(s)
+      return err(e)
+    }
+  })
+
+  ipcMain.handle('update:install', () => {
+    try {
+      const autoUpdaterPromise = loadAutoUpdater()
+      void autoUpdaterPromise.then((autoUpdater) => {
+        autoUpdater.quitAndInstall(false, true) // run installer after quit
+      })
+      return ok({ installing: true })
+    } catch (e) {
       return err(e)
     }
   })

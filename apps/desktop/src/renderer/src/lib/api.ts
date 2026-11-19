@@ -117,7 +117,9 @@ export const api = {
     run: () => call<DoctorFinding[]>(A.doctor.run())
   },
   update: {
-    check: () => call<unknown>(A.update.check()),
+    check: () => call<UpdateState>(A.update.check()),
+    state: () => call<UpdateState>(A.update.state()),
+    install: () => call<{ installing: boolean }>(A.update.install()),
     openRelease: (version: string) => call<boolean>(A.update.openRelease(version))
   },
   appInfo: A.appInfo as { isE2E: boolean }
@@ -140,6 +142,15 @@ export interface DoctorFinding {
   status: 'ok' | 'warn' | 'fail'
   detail?: string
 }
+
+export type UpdateState =
+  | { phase: 'idle' }
+  | { phase: 'checking' }
+  | { phase: 'up-to-date'; version: string }
+  | { phase: 'available'; version: string; releaseUrl: string | null }
+  | { phase: 'downloading'; version: string; percent: number }
+  | { phase: 'downloaded'; version: string }
+  | { phase: 'error'; message: string }
 
 export interface ConvProgress {
   phase?: 'done'

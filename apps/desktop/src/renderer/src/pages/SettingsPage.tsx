@@ -1,15 +1,13 @@
-import { useEffect, useState } from 'react'
-import { api, ApiError, type DoctorFinding } from '../lib/api'
+import { useEffect, useRef, useState } from 'react'
+import {
+  api,
+  ApiError,
+  type DoctorFinding,
+  type UpdateState as ClientUpdateState
+} from '../lib/api'
 
 const APP_VERSION: string = (window as unknown as { api: { appInfo: { version: string } } }).api
   .appInfo.version
-
-interface UpdateState {
-  phase: 'idle' | 'checking' | 'up-to-date' | 'available' | 'error'
-  version?: string
-  message?: string
-  releaseUrl?: string | null
-}
 
 interface BackupRow {
   name: string
@@ -22,22 +20,84 @@ export default function SettingsPage(): React.ReactElement {
   const [doctor, setDoctor] = useState<DoctorFinding[] | null>(null)
   const [doctorBusy, setDoctorBusy] = useState(false)
   const [updateBusy, setUpdateBusy] = useState(false)
+  const [updateState, setUpdateState] = useState<ClientUpdateState | null>(null)
   const [updateMessage, setUpdateMessage] = useState<string | null>(null)
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stopPolling = (): void => {
+    if (pollTimer.current) {
+      clearInterval(pollTimer.current)
+      pollTimer.current = null
+    }
+  }
+
+  const pollState = (): void => {
+    stopPolling()
+    pollTimer.current = setInterval(async () => {
+      try {
+        const s = await api.update.state()
+        setUpdateState(s)
+        // terminal phases end the polling
+        if (s.phase === 'up-to-date' || s.phase === 'downloaded' || s.phase === 'error') {
+          stopPolling()
+          setUpdateBusy(false)
+        }
+      } catch {
+        /* transient */
+      }
+    }, 1000)
+  }
 
   const checkUpdate = async (): Promise<void> => {
     setUpdateBusy(true)
     setUpdateMessage(null)
+    setUpdateState(null)
     try {
-      const s = (await api.update.check()) as UpdateState
-      if (s.phase === 'up-to-date') setUpdateMessage(`已是最新版本（v${s.version}）。`)
-      else if (s.phase === 'available' && s.version) {
-        setUpdateMessage(`发现新版本 v${s.version}！点击前往下载。`)
-        await api.update.openRelease(s.version)
-      } else if (s.phase === 'error') setUpdateMessage(`检查失败：${s.message ?? ''}`)
+      const s = await api.update.check()
+      setUpdateState(s)
+      // a download continues in the background after 'available'
+      if (s.phase === 'available') pollState()
+      else setUpdateBusy(false)
     } catch (e) {
       setUpdateMessage(String(e))
-    } finally {
       setUpdateBusy(false)
+    }
+  }
+
+  const installUpdate = async (): Promise<void> => {
+    try {
+      await api.update.install()
+      // the app quits and the installer takes over
+      setUpdateMessage('正在退出应用并运行安装程序…')
+    } catch (e) {
+      setUpdateMessage(String(e))
+    }
+  }
+
+  useEffect(() => stopPolling, [])
+
+  const renderUpdateStatus = (): React.ReactElement | null => {
+    const s = updateState
+    if (!s) return null
+    switch (s.phase) {
+      case 'checking':
+        return <span>检查中…</span>
+      case 'up-to-date':
+        return <span className="text-emerald-400">已是最新版本（v{s.version}）。</span>
+      case 'available':
+        return <span>发现新版本 v{s.version}，正在后台下载…</span>
+      case 'downloading':
+        return (
+          <span>
+            下载中 v{s.version}：{s.percent}%
+          </span>
+        )
+      case 'downloaded':
+        return <span className="text-emerald-400">新版本 v{s.version} 已就绪。</span>
+      case 'error':
+        return <span className="text-red-400">检查失败：{s.message}</span>
+      default:
+        return null
     }
   }
 
@@ -150,7 +210,24 @@ export default function SettingsPage(): React.ReactElement {
         <p className="mb-2 text-xs text-neutral-500">
           当前版本 v{APP_VERSION}（数据目录：用户 AppData，纯本地无上报）
         </p>
-        {updateMessage && <div className="text-xs text-neutral-300">{updateMessage}</div>}
+        {updateState?.phase === 'downloading' && (
+          <div className="mb-2 h-1.5 w-full overflow-hidden rounded bg-neutral-800">
+            <div
+              className="h-full bg-blue-500 transition-all"
+              style={{ width: `${updateState.percent}%` }}
+            />
+          </div>
+        )}
+        {updateState && <div className="mb-2 text-xs">{renderUpdateStatus()}</div>}
+        {updateState?.phase === 'downloaded' && (
+          <button
+            onClick={installUpdate}
+            className="mb-2 mr-3 rounded bg-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-500"
+          >
+            重启并安装 v{updateState.version}
+          </button>
+        )}
+        {updateMessage && <div className="mb-2 text-xs text-neutral-300">{updateMessage}</div>}
       </div>
 
       <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">

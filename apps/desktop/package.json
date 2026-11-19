@@ -1,6 +1,6 @@
 {
   "name": "@cross-agent-sync/desktop",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Cross-Agent Sync desktop app — local-first shared workspace for AI coding agents",
   "main": "./out/main/index.js",
   "author": "cross-agent-sync contributors",

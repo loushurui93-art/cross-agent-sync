@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.5] - 2026-11-19
+
+### Added
+
+- **One-click in-app updates** — 检查更新 now auto-downloads the new version
+  in the background (live percent bar), then offers 重启并安装 — no more
+  manual installer downloads. quitAndInstall with run-after-install.
+
 ## [0.2.4] - 2026-11-19
 
 ### Added

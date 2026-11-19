@@ -119,6 +119,8 @@ const api = {
   },
   update: {
     check: () => ipcRenderer.invoke('update:check') as Promise<IpcResult<unknown>>,
+    state: () => ipcRenderer.invoke('update:state') as Promise<IpcResult<unknown>>,
+    install: () => ipcRenderer.invoke('update:install') as Promise<IpcResult<unknown>>,
     openRelease: (version: string) =>
       ipcRenderer.invoke('update:openRelease', { version }) as Promise<IpcResult<unknown>>
   }
