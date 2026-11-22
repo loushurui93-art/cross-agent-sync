@@ -19,30 +19,40 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Create draft-less release with notes
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $tag = $env:GITHUB_REF_NAME
-          gh release create $tag --title "$tag" --notes "Windows x64 installer. SHA-256 appended below after the build."
       - name: Bundle MCP server
         run: pnpm --filter @cross-agent-sync/mcp-server build
-      - name: Build app bundles (electron-vite)
-        run: pnpm --filter @cross-agent-sync/desktop build
-      - name: Build Windows installer and publish assets
+      # electron-builder creates a DRAFT release on the tag and uploads
+      # setup.exe + blockmap + latest.yml to it
+      - name: Build Windows installer and upload to draft release
         run: pnpm --filter @cross-agent-sync/desktop exec electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ github.token }}
           ELECTRON_BUILDER_BINARIES_MIRROR: https://npmmirror.com/mirrors/electron-builder-binaries/
-      - name: Append SHA-256 to release notes
+      # publish the draft and add human-readable notes with SHA-256
+      - name: Publish release with SHA-256 notes
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = $env:GITHUB_REF_NAME
-          $exe = Get-ChildItem apps/desktop/dist/*-setup.exe | Select-Object -First 1
-          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
-          $old = gh release view $tag --json body -q .body
-          $new = "$old`n`n**SHA-256 ($($exe.Name))**:`n``$hash``"
-          gh release edit $tag --notes $new
+          $rel = gh api "repos/$env:GITHUB_REPOSITORY/releases" --jq `
+            '[.[] | select(.draft and .tag_name == $tag)][0]' | ConvertFrom-Json
+          if (-not $rel) { throw "no draft release found for $tag" }
+          $exe = $rel.assets | Where-Object { $_.name -like '*-setup.exe' } | Select-Object -First 1
+          if (-not $exe) { throw "no setup.exe among draft assets" }
+          $sha = gh api "repos/$env:GITHUB_REPOSITORY/releases/$($rel.id)/assets" --jq `
+            '.[] | select(.name == $exe.name) | .digest' 2>$null
+          if (-not $sha) {
+            $sha = (Get-FileHash "apps/desktop/dist/$($exe.name)" -Algorithm SHA256).Hash.ToLower()
+          }
+          $sha = $sha -replace '^sha256:', ''
+          $notes = @"
+          Windows x64 installer (unsigned beta). SmartScreen: More info -> Run anyway.
+
+          SHA-256 ($($exe.name)): ``$sha``
+
+          See CHANGELOG.md for what's new.
+          "@
+          gh api -X PATCH "repos/$env:GITHUB_REPOSITORY/releases/$($rel.id)" `
+            -f draft=false -f name=$tag -F body=$notes | Out-Null
+          Write-Host "published $tag — $($exe.name) SHA-256: $sha"
