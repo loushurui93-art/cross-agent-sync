@@ -25,6 +25,7 @@ import { listZcodeSessions, loadZcodeSession } from './sources/zcode'
 import {
   listCodexThreads,
   loadCodexThread,
+  codexRegistryTitles,
   loadScanCacheFile,
   saveScanCacheFile,
   type ScanCache
@@ -216,10 +217,11 @@ export async function importProjectConversations(
     zAll.map((s) => ({ externalId: s.externalId, sourcePath: s.sourcePath, cwd: s.cwd })),
     (s) => loadZcodeSession(zDbPath, s.externalId)
   )
+  const cTitles = codexRegistryTitles(join(chome, 'state_5.sqlite'))
   const cSummary = await importChunked(
     'codex',
     cMatched.map((t) => ({ externalId: t.externalId, sourcePath: t.sourcePath, cwd: t.cwd })),
-    (s) => loadCodexThread(s.sourcePath)
+    (s) => loadCodexThread(s.sourcePath, cTitles.get(s.externalId))
   )
   const kSummary = await importChunked(
     'claude-code',

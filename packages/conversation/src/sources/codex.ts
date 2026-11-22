@@ -6,6 +6,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { DatabaseSync } from 'node:sqlite'
 import { join, dirname } from 'node:path'
 import { decompress } from 'fzstd'
 import type { NormalizedConversation, NormalizedMessage, NormalizedPart, SourceSummary } from '../model'
@@ -94,7 +95,45 @@ export function listCodexThreads(
   return out
 }
 
-export function loadCodexThread(path: string): NormalizedConversation {
+/**
+ * Native titles from Codex's own registry (`state_5.sqlite threads.title`),
+ * keyed by thread id. These are exactly what the Codex sidebar shows
+ * (AI-generated short titles, or the raw first-message fallback).
+ */
+export function codexRegistryTitles(stateDbPath: string): Map<string, string> {
+  const map = new Map<string, string>()
+  if (!existsSync(stateDbPath)) return map
+  try {
+    const r = new DatabaseSync(stateDbPath, { readOnly: true })
+    for (const row of r.prepare('SELECT id, title FROM threads').all() as Array<{
+      id: string
+      title: string | null
+    }>) {
+      if (row.title) map.set(row.id, row.title)
+    }
+    r.close()
+  } catch {
+    /* registry missing/unreadable: fall back to computed titles */
+  }
+  return map
+}
+
+/**
+ * Pick the display title the way Codex's own UI does: prefer the registry's
+ * native title when it looks human-readable, otherwise derive from the
+ * conversation content.
+ */
+function pickTitle(registryTitle: string | undefined, fallback: string): string {
+  const rt = (registryTitle ?? '').trim()
+  // a native title is usable only when it looks human (not raw boilerplate)
+  if (rt && !rt.startsWith('#') && !rt.startsWith('<')) return makeTitle(rt)
+  return makeTitle(fallback)
+}
+
+export function loadCodexThread(
+  path: string,
+  registryTitle?: string
+): NormalizedConversation {
   const text = readRolloutText(path)
   const lines = text.split('\n').filter((l) => l.trim())
   const id = threadIdFromFilename(path) ?? ''
@@ -184,7 +223,7 @@ export function loadCodexThread(path: string): NormalizedConversation {
 
   return {
     externalId: id,
-    title: codexTitleFrom(messages),
+    title: pickTitle(registryTitle, codexTitleFrom(messages)),
     sourcePath: path,
     startedAt,
     messages
@@ -201,15 +240,17 @@ export function loadCodexThread(path: string): NormalizedConversation {
 export function cleanCodexUserText(text: string): string {
   let t = text
   t = t.replace(/<environment_context>[\s\S]*?<\/environment_context>/gi, '')
+  t = t.replace(/<user_instructions>[\s\S]*?<\/user_instructions>/gi, '')
   t = t.replace(
-    /#\s*AGENTS\.md instructions[\s\S]*?<\/INSTRUCTIONS>\s*/gi,
+    /#\s*AGENTS\.md instructions[\s\S]*?(<\/INSTRUCTIONS>|$)/i,
     ''
   )
   t = t.replace(/<INSTRUCTIONS>[\s\S]*?<\/INSTRUCTIONS>/gi, '')
   // app/plugin signal tags (open-page etc.) — generic paired-tag sweep for
   // the <external_...> family Codex injects on desktop sessions
   t = t.replace(/<external_[a-z0-9_]+>[\s\S]*?<\/external_[a-z0-9_]+>/gi, '')
-  t = t.replace(/^#\s*Files mentioned by the user:\s*/i, '')
+  // attachment header may sit at any line start (blocks before it were removed)
+  t = t.replace(/^#\s*Files mentioned by the user:\s*$/im, '')
   t = t.replace(/^##\s+/gm, '') // attachment list headers -> plain text
   t = t.replace(/\n{3,}/g, '\n\n')
   return t.trim()
